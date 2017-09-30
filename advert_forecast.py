@@ -50,7 +50,24 @@ if __name__=='__main__':
 
     #Renaming columns names
     df = df.rename(index=str, columns={"average_position": "avg_position", "total_conversion_value": "tot_conversion_val"})
-    print(df[:3])
+
+    #Getting clicks & coversions columns as lists
+    clicks = df['clicks'].tolist()
+    conversions = df['conversions'].tolist()
+
+    #Moving each element up by removing first element. After that adding 0 to the end so that column size matched DF size
+    clicks.pop(0)
+    clicks.append(0)
+    conversions.pop(0)
+    conversions.append(0)
+
+    #Creating 2 new columns with values of clicks&conversions of the next day
+    df['next_clicks'] = clicks
+    df['next_conversions'] = conversions
+
+    #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
+    print(df[:-1])
+
     plot_corr_mat(df)
 
 
