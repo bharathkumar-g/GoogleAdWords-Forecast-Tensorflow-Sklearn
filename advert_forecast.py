@@ -25,15 +25,15 @@ def plot_corr_mat(df):
 
 def get_year(date):
     year= date.split('-')[0]
-    return year
+    return int(year)
 
 def get_month(date):
     month = date.split('-')[1]
-    return month
+    return int(month)
 
 def get_day(date):
     day = date.split('-')[2]
-    return day
+    return int(day)
 
 if __name__=='__main__':
     #Read data
@@ -65,9 +65,22 @@ if __name__=='__main__':
     df['next_clicks'] = clicks
     df['next_conversions'] = conversions
 
-    #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
-    print(df[:-1])
+    #Plotting correlation matrix
+    #plot_corr_mat(df)
 
-    plot_corr_mat(df)
+    #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
+    df = df[:-1]
+
+    # Shuffling the data, keep the index
+    df = df.sample(frac=1)
+
+    #Dividing the set into input features and output,
+    Y = df.ix[:,'next_clicks']
+    X = df.drop(['next_clicks','next_conversions'],1)
+
+    #Normalizing inputs
+    X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
+    
+    print("X:",X)
 
 
