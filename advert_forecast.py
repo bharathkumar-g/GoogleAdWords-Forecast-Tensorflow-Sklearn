@@ -2,6 +2,7 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 from matplotlib import pyplot as plt
+import tensorflow as tf
 
 def plot_corr_mat(df):
     corr = df.corr()
@@ -82,5 +83,7 @@ if __name__=='__main__':
     X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
     
     print("X:",X)
+
+
 
 
