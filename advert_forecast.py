@@ -103,12 +103,12 @@ if __name__=='__main__':
     X_train = np.array(X[:530])
     Y_train = np.array(Y[:530])
     X_val = np.array(X[530:630])
-    X_val = np.array(Y[530:630])
+    Y_val = np.array(Y[530:630])
     X_test = np.array(X[630:])
     Y_test = np.array(Y[630:])
 
     train_data = DataWrapper(X_train,Y_train,530,10)
-    val_data = DataWrapper(X_val, X_val, 100, 10)
+    val_data = DataWrapper(X_val, Y_val, 100, 10)
     test_data = DataWrapper(X_test, Y_test, 100, 10)
 
     # Defining input/output placeholders
@@ -160,13 +160,20 @@ if __name__=='__main__':
     with tf.Session() as sess:
         # Run the initializer
         sess.run(init)
-        best_val_acc = 0
+        best_val_loss = 1000
         val_acc_his = np.zeros(epochs)
         train_acc_his = np.zeros(epochs)
         for epoch in range(epochs):
-            train_loss = sess.run(loss_op, feed_dict={X: train_data.data[:num_eval_imgs], Y: train_data.labels[:num_eval_imgs], keep_prob: 1.0})
+            train_loss = sess.run(loss_op, feed_dict={X: train_data.data, Y: train_data.labels, keep_prob: 1.0})
             train_acc_his[epoch] = train_loss
-            print("Accuracy after", str(epoch), "epochs: Train set:", train_loss)
+            val_loss = sess.run(loss_op, feed_dict={X: val_data.data, Y: val_data.labels, keep_prob: 1.0})
+            val_acc_his[epoch] = val_loss
+            if val_loss < best_val_loss and epoch != 0:
+                best_val_loss = val_loss
+                acc_info = "val acc has improved! Model saved."
+            else:
+                acc_info = ""
+            print("Accuracy after", str(epoch), "epochs: Train set:", train_loss, ", Val set:", val_loss, acc_info)
             for step in range(steps_in_epoch):
                 batch_x, batch_y = train_data.get_next_batch()
                 #print(batch_x,batch_y)
@@ -174,8 +181,10 @@ if __name__=='__main__':
                 _, pred, loss_ = sess.run([train_op, output, loss_op],
                                           feed_dict={X: batch_x, Y: batch_y, keep_prob: 1.0})
                 #print(pred,loss_)
-
+        test_loss = sess.run(loss_op, feed_dict={X: test_data.data, Y: test_data.labels, keep_prob: 1.0})
+        print("Validation loss:",best_val_loss,",Test loss:", test_loss)
         plt.plot(train_acc_his)
+        plt.plot(val_acc_his)
         plt.show()
         print("Optimization Finished!")
 
