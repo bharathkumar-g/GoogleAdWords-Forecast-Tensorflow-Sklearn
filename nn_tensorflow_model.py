@@ -117,33 +117,44 @@ if __name__=='__main__':
     keep_prob = tf.placeholder(tf.float32)
 
     stddev = 0.01
-    learning_rate = 0.001
-    epochs = 100
+    learning_rate = 0.0001
+    epochs = 500
     batch_size = 10
     steps_in_epoch = 530//10
     num_eval_imgs = 500
+
+    fc1_dim = 30
+    fc2_dim = 20
+    fc3_dim = 20
     # Defining weights and biases
     W = {
-        "fc": tf.Variable(tf.random_normal([11, 30], stddev=stddev)),
-        "out": tf.Variable(tf.random_normal([30, 1], stddev=stddev)),
+        "fc1": tf.Variable(tf.random_normal([11, fc1_dim], stddev=stddev)),
+        "fc2": tf.Variable(tf.random_normal([fc1_dim, fc2_dim], stddev=stddev)),
+        "fc3": tf.Variable(tf.random_normal([fc3_dim, fc3_dim], stddev=stddev)),
+        "out": tf.Variable(tf.random_normal([fc2_dim, 1], stddev=stddev)),
     }
 
     B = {
-        "fc": tf.Variable(tf.random_normal([30], stddev=stddev)),
+        "fc1": tf.Variable(tf.random_normal([fc1_dim], stddev=stddev)),
+        "fc2": tf.Variable(tf.random_normal([fc2_dim], stddev=stddev)),
+        "fc3": tf.Variable(tf.random_normal([fc3_dim], stddev=stddev)),
         "out": tf.Variable(tf.random_normal([1], stddev=stddev)),
     }
 
     # Defining our model
     #fc = tf.reshape(X, [-1, W['fc'].get_shape().as_list()[0]])
-    fc = tf.add(tf.matmul(X, W['fc']), B['fc'])
-    fc = tf.nn.relu(fc)
-
+    fc1 = tf.add(tf.matmul(X, W['fc1']), B['fc1'])
+    fc1 = tf.nn.relu(fc1)
+    fc2 = tf.add(tf.matmul(fc1, W['fc2']), B['fc2'])
+    fc2 = tf.nn.relu(fc2)
+    # fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
+    # fc3 = tf.nn.relu(fc3)
     # Apply Dropout
     #fc = tf.nn.dropout(fc, keep_prob)
 
     # Output
-    output = tf.add(tf.matmul(fc, W['out']), B['out'])
-
+    output = tf.add(tf.matmul(fc2, W['out']), B['out'])
+    output = tf.nn.relu(output)
     # Define loss and optimizer
     loss_op = tf.reduce_mean(tf.abs(output-Y))
 
