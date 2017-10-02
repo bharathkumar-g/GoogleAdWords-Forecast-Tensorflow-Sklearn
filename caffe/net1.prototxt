@@ -1,0 +1,15 @@
+input_dim: 10
+input_dim: 11
+layer {
+  name: "google_ad"
+  type: "HDF5Data"
+  top: "data"
+  top: "label"
+  transform_param {
+    scale: 0.00390625
+  }
+  data_param {
+    source: "source.txt"
+    batch_size: 10
+  }
+}
