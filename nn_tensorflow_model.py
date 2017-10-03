@@ -138,9 +138,10 @@ if __name__=='__main__':
     #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
     df = df[:-1]
 
-    df = get_previous_vals(df,2,diff=True)
+    #Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
+    #df = get_previous_vals(df,n_features=5,diff=True)
 
-    # Shuffling the data, keep the index
+    #Shuffling the data, keep the index
     df = df.sample(frac=1)
 
     #Dividing the set into input features and output,
@@ -155,7 +156,7 @@ if __name__=='__main__':
     train_data_size = 600
     val_data_size = 130
     stddev = 0.01
-    epochs = 5000
+    epochs = 3000
     batch_size = 32
     steps_in_epoch = 530//10
     learning_rate = 0.001
@@ -173,10 +174,10 @@ if __name__=='__main__':
     train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    input_features = 14
-    fc1_dim = 40
+    input_features = 12
+    fc1_dim = 50
     fc2_dim = 40
-    fc3_dim = 40
+    fc3_dim = 30
 
     # Defining input/output placeholders
     X = tf.placeholder(dtype=tf.float32, shape=[None, input_features])
@@ -194,8 +195,8 @@ if __name__=='__main__':
 
     B = {
         "fc1": tf.get_variable("B1", shape=[fc1_dim], initializer=tf.zeros_initializer()),
-        "fc2": tf.get_variable("B2", shape=[fc1_dim], initializer=tf.zeros_initializer()),
-        "fc3": tf.get_variable("B3", shape=[fc1_dim], initializer=tf.zeros_initializer()),
+        "fc2": tf.get_variable("B2", shape=[fc2_dim], initializer=tf.zeros_initializer()),
+        "fc3": tf.get_variable("B3", shape=[fc3_dim], initializer=tf.zeros_initializer()),
         "out": tf.get_variable("B4", shape=[1], initializer=tf.zeros_initializer()),
     }
 
@@ -207,8 +208,9 @@ if __name__=='__main__':
     fc2 = tf.nn.relu(fc2)
     fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
     fc3 = tf.nn.relu(fc3)
+
     # Apply Dropout
-    fc_drop = tf.nn.dropout(fc2, keep_prob)
+    fc_drop = tf.nn.dropout(fc3, keep_prob)
 
     # Output
     output = tf.add(tf.matmul(fc_drop, W['out']), B['out'])
@@ -254,7 +256,7 @@ if __name__=='__main__':
                 #print(batch_x,batch_y)
                 # Run optimization op (backprop)
                 _, pred, loss_ = sess.run([train_op, output, loss_op],
-                                          feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.6})
+                                          feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.75})
                 #print(pred,loss_)
         saver.restore(sess, "/tmp/model.ckpt")
         print("Model loaded.")
