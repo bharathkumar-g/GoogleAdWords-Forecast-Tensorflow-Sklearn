@@ -139,7 +139,7 @@ if __name__=='__main__':
     df = df[:-1]
 
     #Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
-    #df = get_previous_vals(df,n_features=5,diff=True)
+    #df = get_previous_vals(df,n_features=3,diff=True)
 
     #Shuffling the data, keep the index
     df = df.sample(frac=1)
@@ -162,8 +162,8 @@ if __name__=='__main__':
     learning_rate = 0.001
 
     #Splitting into train,val,test sets
-    x = X
-    y = Y
+    X_dataset = X
+    Y_dataset = Y
     X_train = np.array(X[:train_data_size])
     Y_train = np.array(Y[:train_data_size])
     X_val = np.array(X[train_data_size:])
@@ -175,10 +175,10 @@ if __name__=='__main__':
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
     input_features = 12
-    fc1_dim = 50
-    fc2_dim = 40
-    fc3_dim = 30
-
+    fc1_dim = 30
+    fc2_dim = 30
+    fc3_dim = 60
+    out_layer_dim = fc2_dim
     # Defining input/output placeholders
     X = tf.placeholder(dtype=tf.float32, shape=[None, input_features])
     Y = tf.placeholder(dtype=tf.float32, shape=[None])
@@ -190,7 +190,7 @@ if __name__=='__main__':
         "fc1": tf.get_variable("W1", shape=[input_features, fc1_dim], initializer=tf.contrib.layers.xavier_initializer()),
         "fc2": tf.get_variable("W2", shape=[fc1_dim, fc2_dim], initializer=tf.contrib.layers.xavier_initializer()),
         "fc3": tf.get_variable("W3", shape=[fc2_dim, fc3_dim], initializer=tf.contrib.layers.xavier_initializer()),
-        "out": tf.get_variable("W4", shape=[fc3_dim, 1], initializer=tf.contrib.layers.xavier_initializer()),
+        "out": tf.get_variable("W4", shape=[out_layer_dim, 1], initializer=tf.contrib.layers.xavier_initializer()),
     }
 
     B = {
@@ -206,11 +206,11 @@ if __name__=='__main__':
     fc1 = tf.nn.relu(fc1)
     fc2 = tf.add(tf.matmul(fc1, W['fc2']), B['fc2'])
     fc2 = tf.nn.relu(fc2)
-    fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
-    fc3 = tf.nn.relu(fc3)
+    #fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
+    #fc3 = tf.nn.relu(fc3)
 
     # Apply Dropout
-    fc_drop = tf.nn.dropout(fc3, keep_prob)
+    fc_drop = tf.nn.dropout(fc2, keep_prob)
 
     # Output
     output = tf.add(tf.matmul(fc_drop, W['out']), B['out'])
@@ -260,8 +260,8 @@ if __name__=='__main__':
                 #print(pred,loss_)
         saver.restore(sess, "/tmp/model.ckpt")
         print("Model loaded.")
-        euclides_loss = sess.run(loss_euclides, feed_dict={X: x, Y: y, keep_prob: 1.0})
-        squared_loss = sess.run(loss_op, feed_dict={X: x, Y: y, keep_prob: 1.0})
+        euclides_loss = sess.run(loss_euclides, feed_dict={X: X_dataset, Y: Y_dataset, keep_prob: 1.0})
+        squared_loss = sess.run(loss_op, feed_dict={X: X_dataset, Y: Y_dataset, keep_prob: 1.0})
         print("Total loss: Euclides:",euclides_loss,", Squared", squared_loss)
         plt.plot(train_acc_his)
         plt.plot(val_acc_his)
