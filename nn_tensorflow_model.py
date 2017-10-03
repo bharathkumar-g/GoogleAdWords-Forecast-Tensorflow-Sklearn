@@ -82,7 +82,7 @@ def get_working_day(day_of_week):
     else:
         return 0
 
-def get_previous_vals(df,n_features=5):
+def get_previous_vals(df,n_features=5,diff=False):
     prev_features = [df['cost'].tolist(), df['clicks'].tolist(), df['impressions'].tolist(),
                      df['avg_position'].tolist(), df['conversions'].tolist()]
 
@@ -94,9 +94,11 @@ def get_previous_vals(df,n_features=5):
         prev_feature = cp.copy(feature)
         prev_feature.insert(0, 0.0)
         prev_feature.pop(-1)
-        # diff = np.array(feature)-np.array(prev_feature)
-        # df[col_name] = diff
-        df[col_name] = prev_feature
+        if diff:
+            diff_arr = np.array(feature)-np.array(prev_feature)
+            df[col_name] = diff_arr
+        else:
+            df[col_name] = prev_feature
     return df
 
 if __name__=='__main__':
@@ -136,7 +138,7 @@ if __name__=='__main__':
     #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
     df = df[:-1]
 
-    #df = get_previous_vals(df)
+    df = get_previous_vals(df,2,diff=True)
 
     # Shuffling the data, keep the index
     df = df.sample(frac=1)
@@ -157,7 +159,7 @@ if __name__=='__main__':
     batch_size = 32
     steps_in_epoch = 530//10
     learning_rate = 0.001
-    changed_LR = False
+
     #Splitting into train,val,test sets
     x = X
     y = Y
@@ -171,7 +173,7 @@ if __name__=='__main__':
     train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    input_features = 12
+    input_features = 14
     fc1_dim = 40
     fc2_dim = 40
     fc3_dim = 40
@@ -206,10 +208,10 @@ if __name__=='__main__':
     fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
     fc3 = tf.nn.relu(fc3)
     # Apply Dropout
-    #fc = tf.nn.dropout(fc, keep_prob)
+    fc_drop = tf.nn.dropout(fc2, keep_prob)
 
     # Output
-    output = tf.add(tf.matmul(fc2, W['out']), B['out'])
+    output = tf.add(tf.matmul(fc_drop, W['out']), B['out'])
     output = tf.nn.relu(output)
     # Define loss and optimizer
     loss_op = tf.reduce_mean(tf.squared_difference(output,Y))
@@ -227,26 +229,32 @@ if __name__=='__main__':
         # Run the initializer
         sess.run(init)
         best_val_loss = 1000
+        best_train_loss = 1000
         val_acc_his = np.zeros(epochs)
         train_acc_his = np.zeros(epochs)
         for epoch in range(epochs):
             train_loss = sess.run(loss_op, feed_dict={X: train_data.data, Y: train_data.labels, keep_prob: 1.0})
             train_acc_his[epoch] = train_loss
+            if train_loss < best_train_loss and epoch != 0:
+                best_train_loss = train_loss
+                acc_info = "train acc has improved!"
+            else:
+                acc_info = ""
             val_loss = sess.run(loss_op, feed_dict={X: val_data.data, Y: val_data.labels, keep_prob: 1.0})
             val_acc_his[epoch] = val_loss
             if val_loss < best_val_loss and epoch != 0:
                 best_val_loss = val_loss
-                acc_info = "val acc has improved! Model saved."
+                acc_info += "val acc has improved! Model saved."
                 saver.save(sess, "/tmp/model.ckpt")
             else:
-                acc_info = ""
+                acc_info += ""
             print("Accuracy after", str(epoch), "epochs: Train set:", train_loss, ", Val set:", val_loss, acc_info)
             for step in range(steps_in_epoch):
                 batch_x, batch_y = train_data.get_next_batch()
                 #print(batch_x,batch_y)
                 # Run optimization op (backprop)
                 _, pred, loss_ = sess.run([train_op, output, loss_op],
-                                          feed_dict={X: batch_x, Y: batch_y, keep_prob: 1.0})
+                                          feed_dict={X: batch_x, Y: batch_y, keep_prob: 0.6})
                 #print(pred,loss_)
         saver.restore(sess, "/tmp/model.ckpt")
         print("Model loaded.")
