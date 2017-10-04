@@ -183,7 +183,8 @@ if __name__=='__main__':
 
     train_error_arr = np.zeros(3)
     val_error_arr = np.zeros(3)
-
+    best_val_error = 1000
+    best_error_info = {"kernel_name":"","train_error":0,"val_error:":0}
     for i in range(num_eval):
         train_data_inds = random.sample(range(total_data_size), train_data_size)
         val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
@@ -220,6 +221,11 @@ if __name__=='__main__':
             val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
             val_error_arr[id] += val_error_int
 
+            avg_err = (train_error_int+val_error_int)/2
+            if val_error_int < best_val_error and val_error_int >= train_error_int:
+                best_error_info ={"kernel_name":kernel_name,"train_error":train_error_int,"val_error":val_error_int}
+                best_val_error = val_error_int
+
             #print(kernel_name,"kernel, Train Error:",train_error_int,"Val Error:",val_error_int)
 
 
@@ -229,3 +235,8 @@ if __name__=='__main__':
     print("Evaluation finished, showing average results from",num_eval,"evaluations.")
     for train_error,val_error,kernel_name in zip(train_error_arr,val_error_arr,classifiers['kernel_names']):
         print("SVM with",kernel_name,": Train error",train_error,", Val error:",val_error)
+    print(
+        "Best result for",best_error_info["kernel_name"],
+        ", train error:",best_error_info["train_error"],
+        ", val error:", best_error_info["val_error"]
+    )
