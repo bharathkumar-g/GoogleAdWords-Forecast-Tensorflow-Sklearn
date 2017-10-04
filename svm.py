@@ -6,23 +6,6 @@ from sklearn.svm import SVR
 import copy as cp
 import random
 
-class DataWrapper:
-    def __init__(self,x,y,data_size,batch_size):
-        self.data = x
-        self.labels = y
-        self.data_size = data_size
-        self.batch_size = batch_size
-        self.next_batch_ind = 0
-
-    def get_next_batch(self):
-        batch_x = self.data[self.next_batch_ind:self.next_batch_ind+batch_size]
-        batch_y = self.labels[self.next_batch_ind:self.next_batch_ind+batch_size]
-        self.next_batch_ind += self.batch_size
-        if self.next_batch_ind + self.batch_size > self.data_size:
-            self.next_batch_ind = 0
-        #print(batch_x,batch_y)
-        return batch_x,batch_y
-
 START_YEAR = 2015
 DAYS_IN_YEAR = 365
 MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31]
@@ -146,11 +129,12 @@ if __name__=='__main__':
                    columns={"average_position": "avg_position", "total_conversion_value": "tot_conversion_val"})
 
     #Exponential smoothing of clicks
-    #clicks = df['clicks']
-    #df['clicks_smoothed'] = pd.ewma(clicks, span=2)
+    clicks = df['clicks']
+    df['clicks_smoothed'] = pd.ewma(clicks, span=2)
 
     #Creating 2 new columns with values of clicks&conversions of the next day
     df['next_clicks'] = get_next_values(df['clicks'])
+    df['next_clicks_smoothed'] = get_next_values(df['clicks_smoothed'])
     df['next_conversions'] = get_next_values(df['conversions'])
 
     #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
@@ -163,13 +147,16 @@ if __name__=='__main__':
     df = df.sample(frac=1)
 
     #Dividing the set into input features and output,
-    Y = df.ix[:,'next_clicks'].astype(float)
-    X = df.drop(['next_clicks','next_conversions'],1)
+    Y_smoothed = df[['next_clicks_smoothed']].astype(float)
+    Y_real = df[['next_clicks']].astype(float)
 
-    #print(X.head(10))
+    X = df.drop(['next_clicks','next_clicks_smoothed','next_conversions'],1)
 
     #Normalizing inputs
     X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
+
+    X_smoothed = X.drop(['clicks'],1)
+    X_real = X.drop(['clicks_smoothed'], 1)
 
     train_data_size = 600
     val_data_size = 130
@@ -181,24 +168,28 @@ if __name__=='__main__':
     learning_rate = 0.001
     num_eval = 20
 
-    #Splitting into train,val,test sets
-    X = np.array(X)
-    Y = np.array(Y)
+    X_smoothed = np.array(X_smoothed)
+    X_real = np.array(X_real)
+    Y_smoothed = np.array(Y_smoothed)
+    Y_real = np.array(Y_real)
 
     train_error_arr = np.zeros(3)
     val_error_arr = np.zeros(3)
     best_val_error = 20
     best_error_info = {"kernel_name":"","train_error":0,"val_error:":0}
     for i in range(num_eval):
+        #Randomly splitting into train,val sets
         train_data_inds = random.sample(range(total_data_size), train_data_size)
         val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
-        X_train = X[train_data_inds]
-        Y_train = Y[train_data_inds]
-        X_val = X[val_data_inds]
-        Y_val = Y[val_data_inds]
+        X_train_smoothed = X_smoothed[train_data_inds]
+        Y_train_smoothed = Y_smoothed[train_data_inds]
+        X_train_real = X_real[train_data_inds]
+        Y_train_real = Y_real[train_data_inds]
+        X_val = X_real[val_data_inds]
+        Y_val = Y_real[val_data_inds]
 
-        train_data = DataWrapper(X_train, Y_train, train_data_size, batch_size)
-        val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
+        # train_data = DataWrapper(X_train, Y_train, train_data_size, batch_size)
+        # val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
         # Defining our SVR
         svr_lin = SVR(kernel='linear', C=1e3)
@@ -209,20 +200,20 @@ if __name__=='__main__':
 
         for classifier,kernel_name,id in zip(classifiers["types"],classifiers["kernel_names"],range(3)):
             #print("SVM with",kernel_name,"kernel:")
-            classifier.fit(train_data.data, train_data.labels)
+            classifier.fit(X_train_smoothed, Y_train_smoothed)
 
             # Calculating Train set error
-            predictions_train = classifier.predict(train_data.data)
+            predictions_train = classifier.predict(X_train_real)
             get_positive_vals = lambda x: x if x >= 0 else 0
             predictions_train = [get_positive_vals(y) for y in predictions_train]
-            train_error_int = get_euclides_error(predictions_train, train_data.labels,round=True)
+            train_error_int = get_euclides_error(predictions_train, Y_train_real,round=True)
             train_error_arr[id] += train_error_int
 
             # Calcualting Val set error
-            predictions_val = classifier.predict(val_data.data)
+            predictions_val = classifier.predict(X_val)
             get_positive_vals = lambda x: x if x >= 0 else 0
             predictions_val = [get_positive_vals(y) for y in predictions_val]
-            val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
+            val_error_int = get_euclides_error(predictions_val, Y_val,round=True)
             val_error_arr[id] += val_error_int
 
             avg_err = (train_error_int+val_error_int)/2
