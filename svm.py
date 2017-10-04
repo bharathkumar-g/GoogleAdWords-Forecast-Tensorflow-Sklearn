@@ -115,39 +115,43 @@ def get_euclides_error(predictions, labels,round = False,print_arrays=False):
         print(results)
     return total_error / len(predictions)
 
+def get_next_values(df_col):
+    df_col = df_col.tolist()
+    df_col.pop(0)
+    df_col.append(0)
+    return df_col
+
 if __name__=='__main__':
     #Read data
     df = pd.read_csv('ad_data.csv')
 
     # Parsing date
     df['year'] = df.date.apply(get_year)
-    #df['month'] = df.date.apply(get_month)
-    #df['day'] = df.date.apply(get_day)
+    df['month'] = df.date.apply(get_month)
+    df['day'] = df.date.apply(get_day)
     df['day_of_week'] = df.date.apply(get_day_of_week)
     df['total_day_count'] = df.date.apply(get_total_day_count)
     df['working_day'] = df.day_of_week.apply(get_working_day)
     df = df.drop('date', 1)
 
     # Moving year,month,day columns to front
-    df = df[['year', 'day_of_week','working_day', 'total_day_count', 'impressions', 'clicks', 'conversions', 'cost',
+    # df = df[['year', 'day_of_week','working_day', 'total_day_count', 'impressions', 'clicks', 'conversions', 'cost',
+    #          'total_conversion_value', 'average_position', 'reservations', 'price']]
+
+    df = df[['year','month', 'day','impressions','day_of_week','working_day', 'clicks', 'conversions', 'cost',
              'total_conversion_value', 'average_position', 'reservations', 'price']]
 
     # Renaming columns names
     df = df.rename(index=str,
                    columns={"average_position": "avg_position", "total_conversion_value": "tot_conversion_val"})
-    #Getting clicks & coversions columns as lists
-    clicks = df['clicks'].tolist()
-    conversions = df['conversions'].tolist()
 
-    #Moving each element up by removing first element. After that adding 0 to the end so that column size matched DF size
-    clicks.pop(0)
-    clicks.append(0)
-    conversions.pop(0)
-    conversions.append(0)
+    #Exponential smoothing of clicks
+    #clicks = df['clicks']
+    #df['clicks_smoothed'] = pd.ewma(clicks, span=2)
 
     #Creating 2 new columns with values of clicks&conversions of the next day
-    df['next_clicks'] = clicks
-    df['next_conversions'] = conversions
+    df['next_clicks'] = get_next_values(df['clicks'])
+    df['next_conversions'] = get_next_values(df['conversions'])
 
     #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
     df = df[:-1]
@@ -183,7 +187,7 @@ if __name__=='__main__':
 
     train_error_arr = np.zeros(3)
     val_error_arr = np.zeros(3)
-    best_val_error = 1000
+    best_val_error = 20
     best_error_info = {"kernel_name":"","train_error":0,"val_error:":0}
     for i in range(num_eval):
         train_data_inds = random.sample(range(total_data_size), train_data_size)
@@ -236,7 +240,7 @@ if __name__=='__main__':
     for train_error,val_error,kernel_name in zip(train_error_arr,val_error_arr,classifiers['kernel_names']):
         print("SVM with",kernel_name,": Train error",train_error,", Val error:",val_error)
     print(
-        "Best result for",best_error_info["kernel_name"],
+        "Best result for",best_error_info["kernel_name"],"kernel",
         ", train error:",best_error_info["train_error"],
         ", val error:", best_error_info["val_error"]
     )
