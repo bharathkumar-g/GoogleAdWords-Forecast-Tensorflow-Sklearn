@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.svm import SVR
 import copy as cp
+import random
 
 class DataWrapper:
     def __init__(self,x,y,data_size,batch_size):
@@ -87,20 +88,6 @@ def get_previous_vals(df,n_features=5,diff=False):
                      df['avg_position'].tolist(), df['conversions'].tolist()]
 
     col_names = ['prev_cost', 'prev_clicks', 'prev_impressions','prev_avg_position', 'prev_conversions']
-
-def get_euclides_error(predictions, labels,round = False,print_arrays=False):
-    if round:
-        predictions = np.rint(predictions)
-    total_error = 0
-    for y_pred, label in zip(predictions, labels):
-        total_error = total_error + np.abs(y_pred-label)
-    if print_arrays:
-        results = np.zeros((len(predictions),2))
-        results[:,0] = predictions
-        results[:,1] = labels
-        print(results)
-    return total_error / len(predictions)
-
     #Choosing only first n features
     prev_features = prev_features[:n_features]
     col_names = col_names[:n_features]
@@ -114,6 +101,19 @@ def get_euclides_error(predictions, labels,round = False,print_arrays=False):
         else:
             df[col_name] = prev_feature
     return df
+
+def get_euclides_error(predictions, labels,round = False,print_arrays=False):
+    if round:
+        predictions = np.rint(predictions)
+    total_error = 0
+    for y_pred, label in zip(predictions, labels):
+        total_error = total_error + np.abs(y_pred-label)
+    if print_arrays:
+        results = np.zeros((len(predictions),2))
+        results[:,0] = predictions
+        results[:,1] = labels
+        print(results)
+    return total_error / len(predictions)
 
 if __name__=='__main__':
     #Read data
@@ -153,7 +153,7 @@ if __name__=='__main__':
     df = df[:-1]
 
     #Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
-    #df = get_previous_vals(df,n_features=3,diff=True)
+    #df = get_previous_vals(df,n_features=5,diff=True)
 
     #Shuffling the data, keep the index
     df = df.sample(frac=1)
@@ -169,48 +169,63 @@ if __name__=='__main__':
 
     train_data_size = 600
     val_data_size = 130
+    total_data_size = train_data_size + val_data_size
     stddev = 0.01
     epochs = 3000
     batch_size = 32
     steps_in_epoch = 530//10
     learning_rate = 0.001
+    num_eval = 20
 
     #Splitting into train,val,test sets
-    X_dataset = X
-    Y_dataset = Y
-    X_train = np.array(X[:train_data_size])
-    Y_train = np.array(Y[:train_data_size])
-    X_val = np.array(X[train_data_size:])
-    Y_val = np.array(Y[train_data_size:])
-    # X_test = np.array(X[train_data_size+val_data_size:])
-    # Y_test = np.array(Y[train_data_size+val_data_size:])
+    X = np.array(X)
+    Y = np.array(Y)
 
-    train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
-    val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
+    train_error_arr = np.zeros(3)
+    val_error_arr = np.zeros(3)
 
-    # Defining our SVR
-    svr_lin = SVR(kernel='linear', C=1e3)
-    svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
-    svr_poly = SVR(kernel='poly', C=1e3, degree=2)
+    for i in range(num_eval):
+        train_data_inds = random.sample(range(total_data_size), train_data_size)
+        val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
+        X_train = X[train_data_inds]
+        Y_train = Y[train_data_inds]
+        X_val = X[val_data_inds]
+        Y_val = Y[val_data_inds]
 
-    classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
+        train_data = DataWrapper(X_train, Y_train, train_data_size, batch_size)
+        val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    for classifier,kernel_name in zip(classifiers["types"],classifiers["kernel_names"]):
-        print("SVM with",kernel_name,"kernel:")
-        classifier.fit(train_data.data, train_data.labels)
+        # Defining our SVR
+        svr_lin = SVR(kernel='linear', C=1e3)
+        svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.01)
+        svr_poly = SVR(kernel='poly', C=1e3, degree=2,gamma=0.05)
 
-        # Calculating Train set error
-        predictions_train = classifier.predict(train_data.data)
-        get_positive_vals = lambda x: x if x >= 0 else 0
-        predictions_train = [get_positive_vals(y) for y in predictions_train]
-        train_error_float = get_euclides_error(predictions_train, train_data.labels,round=False)
-        train_error_int = get_euclides_error(predictions_train, train_data.labels,round=True)
-        print("Train Error: Float", train_error_float,", Rounded:",train_error_int)
+        classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
 
-        # Calcualting Val set error
-        predictions_val = classifier.predict(val_data.data)
-        get_positive_vals = lambda x: x if x >= 0 else 0
-        predictions_val = [get_positive_vals(y) for y in predictions_val]
-        val_error_float = get_euclides_error(predictions_val, val_data.labels,round=False)
-        val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
-        print("Val Error: Float", val_error_float,", Rounded:",val_error_int)
+        for classifier,kernel_name,id in zip(classifiers["types"],classifiers["kernel_names"],range(3)):
+            #print("SVM with",kernel_name,"kernel:")
+            classifier.fit(train_data.data, train_data.labels)
+
+            # Calculating Train set error
+            predictions_train = classifier.predict(train_data.data)
+            get_positive_vals = lambda x: x if x >= 0 else 0
+            predictions_train = [get_positive_vals(y) for y in predictions_train]
+            train_error_int = get_euclides_error(predictions_train, train_data.labels,round=True)
+            train_error_arr[id] += train_error_int
+
+            # Calcualting Val set error
+            predictions_val = classifier.predict(val_data.data)
+            get_positive_vals = lambda x: x if x >= 0 else 0
+            predictions_val = [get_positive_vals(y) for y in predictions_val]
+            val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
+            val_error_arr[id] += val_error_int
+
+            #print(kernel_name,"kernel, Train Error:",train_error_int,"Val Error:",val_error_int)
+
+
+    train_error_arr = train_error_arr/num_eval
+    val_error_arr = val_error_arr / num_eval
+    
+    print("Evaluation finished, showing average results from",num_eval,"evaluations.")
+    for train_error,val_error,kernel_name in zip(train_error_arr,val_error_arr,classifiers['kernel_names']):
+        print("SVM with",kernel_name,": Train error",train_error,", Val error:",val_error)
