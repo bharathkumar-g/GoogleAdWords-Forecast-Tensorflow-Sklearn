@@ -88,14 +88,17 @@ def get_previous_vals(df,n_features=5,diff=False):
 
     col_names = ['prev_cost', 'prev_clicks', 'prev_impressions','prev_avg_position', 'prev_conversions']
 
-def get_euclides_error(predictions, labels):
+def get_euclides_error(predictions, labels,round = False,print_arrays=False):
+    if round:
+        predictions = np.rint(predictions)
     total_error = 0
     for y_pred, label in zip(predictions, labels):
         total_error = total_error + np.abs(y_pred-label)
-    results = np.zeros((len(predictions),2))
-    results[:,0] = predictions
-    results[:,1] = labels
-    print(results)
+    if print_arrays:
+        results = np.zeros((len(predictions),2))
+        results[:,0] = predictions
+        results[:,1] = labels
+        print(results)
     return total_error / len(predictions)
 
     #Choosing only first n features
@@ -193,15 +196,17 @@ if __name__=='__main__':
     predictions_train = classifier.predict(train_data.data)
     get_positive_vals = lambda x: x if x >= 0 else 0
     predictions_train = [get_positive_vals(y) for y in predictions_train]
-    train_error = get_euclides_error(predictions_train, train_data.labels)
-    print("Train Error:", train_error)
+    train_error_float = get_euclides_error(predictions_train, train_data.labels,round=False)
+    train_error_int = get_euclides_error(predictions_train, train_data.labels,round=True)
+    print("Train Error: Float", train_error_float,", Rounded:",train_error_int)
 
     # Calcualting Val set error
     predictions_val = classifier.predict(val_data.data)
     get_positive_vals = lambda x: x if x >= 0 else 0
     predictions_val = [get_positive_vals(y) for y in predictions_val]
-    val_error = get_euclides_error(predictions_val, val_data.labels)
-    print("Val Error:", val_error)
+    val_error_float = get_euclides_error(predictions_val, val_data.labels,round=False)
+    val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
+    print("Val Error: Float", val_error_float,", Rounded:",val_error_int)
 
     # Saving predictions
     #np.savetxt("svm_predictions.csv", predictions_test_final, delimiter=",")
