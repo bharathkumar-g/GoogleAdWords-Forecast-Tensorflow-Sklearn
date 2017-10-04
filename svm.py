@@ -6,23 +6,6 @@ from sklearn.svm import SVR
 import copy as cp
 import random
 
-class DataWrapper:
-    def __init__(self,x,y,data_size,batch_size):
-        self.data = x
-        self.labels = y
-        self.data_size = data_size
-        self.batch_size = batch_size
-        self.next_batch_ind = 0
-
-    def get_next_batch(self):
-        batch_x = self.data[self.next_batch_ind:self.next_batch_ind+batch_size]
-        batch_y = self.labels[self.next_batch_ind:self.next_batch_ind+batch_size]
-        self.next_batch_ind += self.batch_size
-        if self.next_batch_ind + self.batch_size > self.data_size:
-            self.next_batch_ind = 0
-        #print(batch_x,batch_y)
-        return batch_x,batch_y
-
 START_YEAR = 2015
 DAYS_IN_YEAR = 365
 MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31]
@@ -179,7 +162,7 @@ if __name__=='__main__':
     batch_size = 32
     steps_in_epoch = 530//10
     learning_rate = 0.001
-    num_eval = 20
+    num_eval = 100
 
     #Splitting into train,val,test sets
     X = np.array(X)
@@ -187,7 +170,7 @@ if __name__=='__main__':
 
     train_error_arr = np.zeros(3)
     val_error_arr = np.zeros(3)
-    best_val_error = 20
+    best_val_error = 1000
     best_error_info = {"kernel_name":"","train_error":0,"val_error:":0}
     for i in range(num_eval):
         train_data_inds = random.sample(range(total_data_size), train_data_size)
@@ -196,9 +179,6 @@ if __name__=='__main__':
         Y_train = Y[train_data_inds]
         X_val = X[val_data_inds]
         Y_val = Y[val_data_inds]
-
-        train_data = DataWrapper(X_train, Y_train, train_data_size, batch_size)
-        val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
         # Defining our SVR
         svr_lin = SVR(kernel='linear', C=1e3)
@@ -209,20 +189,20 @@ if __name__=='__main__':
 
         for classifier,kernel_name,id in zip(classifiers["types"],classifiers["kernel_names"],range(3)):
             #print("SVM with",kernel_name,"kernel:")
-            classifier.fit(train_data.data, train_data.labels)
+            classifier.fit(X_train, Y_train)
 
             # Calculating Train set error
-            predictions_train = classifier.predict(train_data.data)
+            predictions_train = classifier.predict(X_train)
             get_positive_vals = lambda x: x if x >= 0 else 0
             predictions_train = [get_positive_vals(y) for y in predictions_train]
-            train_error_int = get_euclides_error(predictions_train, train_data.labels,round=True)
+            train_error_int = get_euclides_error(predictions_train, Y_train,round=True)
             train_error_arr[id] += train_error_int
 
             # Calcualting Val set error
-            predictions_val = classifier.predict(val_data.data)
+            predictions_val = classifier.predict(X_val)
             get_positive_vals = lambda x: x if x >= 0 else 0
             predictions_val = [get_positive_vals(y) for y in predictions_val]
-            val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
+            val_error_int = get_euclides_error(predictions_val, Y_val,round=True)
             val_error_arr[id] += val_error_int
 
             avg_err = (train_error_int+val_error_int)/2
