@@ -2,7 +2,7 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn import svm
+from sklearn.svm import SVR
 import copy as cp
 
 class DataWrapper:
@@ -162,7 +162,7 @@ if __name__=='__main__':
     Y = df.ix[:,'next_clicks'].astype(float)
     X = df.drop(['next_clicks','next_conversions'],1)
 
-    print(X.head(10))
+    #print(X.head(10))
 
     #Normalizing inputs
     X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
@@ -188,25 +188,29 @@ if __name__=='__main__':
     train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    # Training our model
-    classifier = svm.SVR()
-    classifier.fit(train_data.data, train_data.labels)
+    # Defining our SVR
+    svr_lin = SVR(kernel='linear', C=1e3)
+    svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
+    svr_poly = SVR(kernel='poly', C=1e3, degree=2)
 
-    # Calculating Train set error
-    predictions_train = classifier.predict(train_data.data)
-    get_positive_vals = lambda x: x if x >= 0 else 0
-    predictions_train = [get_positive_vals(y) for y in predictions_train]
-    train_error_float = get_euclides_error(predictions_train, train_data.labels,round=False)
-    train_error_int = get_euclides_error(predictions_train, train_data.labels,round=True)
-    print("Train Error: Float", train_error_float,", Rounded:",train_error_int)
+    classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
 
-    # Calcualting Val set error
-    predictions_val = classifier.predict(val_data.data)
-    get_positive_vals = lambda x: x if x >= 0 else 0
-    predictions_val = [get_positive_vals(y) for y in predictions_val]
-    val_error_float = get_euclides_error(predictions_val, val_data.labels,round=False)
-    val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
-    print("Val Error: Float", val_error_float,", Rounded:",val_error_int)
+    for classifier,kernel_name in zip(classifiers["types"],classifiers["kernel_names"]):
+        print("SVM with",kernel_name,"kernel:")
+        classifier.fit(train_data.data, train_data.labels)
 
-    # Saving predictions
-    #np.savetxt("svm_predictions.csv", predictions_test_final, delimiter=",")
+        # Calculating Train set error
+        predictions_train = classifier.predict(train_data.data)
+        get_positive_vals = lambda x: x if x >= 0 else 0
+        predictions_train = [get_positive_vals(y) for y in predictions_train]
+        train_error_float = get_euclides_error(predictions_train, train_data.labels,round=False)
+        train_error_int = get_euclides_error(predictions_train, train_data.labels,round=True)
+        print("Train Error: Float", train_error_float,", Rounded:",train_error_int)
+
+        # Calcualting Val set error
+        predictions_val = classifier.predict(val_data.data)
+        get_positive_vals = lambda x: x if x >= 0 else 0
+        predictions_val = [get_positive_vals(y) for y in predictions_val]
+        val_error_float = get_euclides_error(predictions_val, val_data.labels,round=False)
+        val_error_int = get_euclides_error(predictions_val, val_data.labels,round=True)
+        print("Val Error: Float", val_error_float,", Rounded:",val_error_int)
