@@ -5,85 +5,7 @@ from matplotlib import pyplot as plt
 from sklearn.svm import SVR
 import copy as cp
 import random
-
-START_YEAR = 2015
-DAYS_IN_YEAR = 365
-MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31]
-
-def plot_corr_mat(df):
-    corr = df.corr()
-    # Generate a mask for the upper triangle
-    mask = np.zeros_like(corr, dtype=np.bool)
-    mask[np.triu_indices_from(mask)] = True
-
-    # Set up the matplotlib figure
-    f, ax = plt.subplots(figsize=(30, 9))
-
-    # Generate a custom diverging colormap
-    cmap = sns.diverging_palette(220, 10, as_cmap=True)
-
-    # Draw the heatmap with the mask and correct aspect ratio
-    sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
-                square=True, linewidths=.5, cbar_kws={"shrink": .5})
-
-    sns.set(font_scale=0.8)
-
-    plt.show()
-
-def get_year(date):
-    year= date.split('-')[0]
-    return int(year)
-
-def get_month(date):
-    month = date.split('-')[1]
-    return int(month)
-
-def get_day(date):
-    day = date.split('-')[2]
-    return int(day)
-
-def get_day_of_week(date):
-    total_day_count = get_total_day_count(date)
-    day_of_week = np.mod(total_day_count+3,7) #0-Monday,6-Sunday
-    return day_of_week
-
-def get_total_day_count(date):
-    year,month,day_of_month = date.split('-') #['yyyy', 'mm', 'dd']
-    day_count = (int(year) - START_YEAR)*DAYS_IN_YEAR + get_day_of_year(year,month,day_of_month)
-    return day_count
-
-def get_day_of_year(year,month,day_of_month):
-    day_count = 0
-    if year == '2016':
-        MONTH_DAYS[1] = 29
-    for i in range(int(month)-1):
-        day_count += MONTH_DAYS[i]
-    return day_count + int(day_of_month) -1
-
-def get_working_day(day_of_week):
-    if day_of_week <= 4:
-        return 1
-    else:
-        return 0
-
-def get_previous_vals(df,n_features=5,diff=False):
-    prev_features = [df['cost'].tolist(), df['clicks'].tolist(), df['impressions'].tolist(),
-                     df['avg_position'].tolist(), df['conversions'].tolist()]
-
-    col_names = ['prev_cost', 'prev_clicks', 'prev_impressions','prev_avg_position', 'prev_conversions']
-    #Choosing only first n features
-    prev_features = prev_features[:n_features]
-    col_names = col_names[:n_features]
-    for feature, col_name in zip(prev_features, col_names):
-        prev_feature = cp.copy(feature)
-        prev_feature.insert(0, 0.0)
-        prev_feature.pop(-1)
-        if diff:
-            diff_arr = np.array(feature)-np.array(prev_feature)
-            df[col_name] = diff_arr
-        else:
-            df[col_name] = prev_feature
-    return df
+from data_utils import *
 
 def get_euclides_error(predictions, labels,round = False,print_arrays=False):
     if round:
@@ -97,12 +19,6 @@ def get_euclides_error(predictions, labels,round = False,print_arrays=False):
         results[:,1] = labels
         print(results)
     return total_error / len(predictions)
-
-def get_next_values(df_col):
-    df_col = df_col.tolist()
-    df_col.pop(0)
-    df_col.append(0)
-    return df_col
 
 if __name__=='__main__':
     #Read data
