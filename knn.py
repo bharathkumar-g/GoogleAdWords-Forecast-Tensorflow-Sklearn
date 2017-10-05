@@ -101,4 +101,3 @@ if __name__ == '__main__':
     scores = scores/num_eval
     print(scores)
     print("Best avg score for n = ",np.argmin(scores)+1,",avg score = ",np.min(scores))
-    
