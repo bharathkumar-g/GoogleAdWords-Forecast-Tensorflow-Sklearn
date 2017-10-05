@@ -12,7 +12,6 @@ batch_size = 32
 steps_in_epoch = 530 // 10
 learning_rate = 0.001
 
-
 def get_euclides_error(predictions, labels, round=False, print_arrays=False):
     if round:
         predictions = np.rint(predictions)
@@ -25,15 +24,6 @@ def get_euclides_error(predictions, labels, round=False, print_arrays=False):
         results[:, 1] = labels
         print(results)
     return total_error / len(predictions)
-
-def euclidean_distance(row):
-    """
-    A simple euclidean distance function
-    """
-    inner_value = 0
-    for k in distance_columns:
-        inner_value += (row[k] - selected_player[k]) ** 2
-    return math.sqrt(inner_value)
 
 if __name__ == '__main__':
     # Read data
@@ -83,6 +73,7 @@ if __name__ == '__main__':
     X = np.array(X)
     Y = np.array(Y)
 
+
     # Random splitting data into train,val sets
     train_data_inds = random.sample(range(total_data_size), train_data_size)
     val_data_inds = list(set(range(total_data_size)) - set(train_data_inds))
@@ -90,3 +81,11 @@ if __name__ == '__main__':
     Y_train = Y[train_data_inds]
     X_val = X[val_data_inds]
     Y_val = Y[val_data_inds]
+
+    knn_classifier = KNeighborsRegressor(n_neighbors=1, weights='distance')
+    knn_classifier.fit(X_train, Y_train)
+    predictions_train = knn_classifier.predict(X_train)
+    train_error = get_euclides_error(predictions_train, Y_train)
+    predictions_val = knn_classifier.predict(X_val)
+    val_error = get_euclides_error(predictions_val,Y_val)
+    print("Train error:",train_error,", Val error:",val_error)
