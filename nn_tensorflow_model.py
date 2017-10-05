@@ -1,9 +1,6 @@
 import pandas as pd
-import seaborn as sns
-import numpy as np
-from matplotlib import pyplot as plt
 import tensorflow as tf
-import copy as cp
+from data_utils import *
 
 class DataWrapper:
     def __init__(self,x,y,data_size,batch_size):
@@ -26,114 +23,30 @@ START_YEAR = 2015
 DAYS_IN_YEAR = 365
 MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31]
 
-def plot_corr_mat(df):
-    corr = df.corr()
-    # Generate a mask for the upper triangle
-    mask = np.zeros_like(corr, dtype=np.bool)
-    mask[np.triu_indices_from(mask)] = True
-
-    # Set up the matplotlib figure
-    f, ax = plt.subplots(figsize=(30, 9))
-
-    # Generate a custom diverging colormap
-    cmap = sns.diverging_palette(220, 10, as_cmap=True)
-
-    # Draw the heatmap with the mask and correct aspect ratio
-    sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0,
-                square=True, linewidths=.5, cbar_kws={"shrink": .5})
-
-    sns.set(font_scale=0.8)
-
-    plt.show()
-
-def get_year(date):
-    year= date.split('-')[0]
-    return int(year)
-
-def get_month(date):
-    month = date.split('-')[1]
-    return int(month)
-
-def get_day(date):
-    day = date.split('-')[2]
-    return int(day)
-
-def get_day_of_week(date):
-    total_day_count = get_total_day_count(date)
-    day_of_week = np.mod(total_day_count+3,7) #0-Monday,6-Sunday
-    return day_of_week
-
-def get_total_day_count(date):
-    year,month,day_of_month = date.split('-') #['yyyy', 'mm', 'dd']
-    day_count = (int(year) - START_YEAR)*DAYS_IN_YEAR + get_day_of_year(year,month,day_of_month)
-    return day_count
-
-def get_day_of_year(year,month,day_of_month):
-    day_count = 0
-    if year == '2016':
-        MONTH_DAYS[1] = 29
-    for i in range(int(month)-1):
-        day_count += MONTH_DAYS[i]
-    return day_count + int(day_of_month) -1
-
-def get_working_day(day_of_week):
-    if day_of_week <= 4:
-        return 1
-    else:
-        return 0
-
-def get_previous_vals(df,n_features=5,diff=False):
-    prev_features = [df['cost'].tolist(), df['clicks'].tolist(), df['impressions'].tolist(),
-                     df['avg_position'].tolist(), df['conversions'].tolist()]
-
-    col_names = ['prev_cost', 'prev_clicks', 'prev_impressions','prev_avg_position', 'prev_conversions']
-    #Choosing only first n features
-    prev_features = prev_features[:n_features]
-    col_names = col_names[:n_features]
-    for feature, col_name in zip(prev_features, col_names):
-        prev_feature = cp.copy(feature)
-        prev_feature.insert(0, 0.0)
-        prev_feature.pop(-1)
-        if diff:
-            diff_arr = np.array(feature)-np.array(prev_feature)
-            df[col_name] = diff_arr
-        else:
-            df[col_name] = prev_feature
-    return df
-
 if __name__=='__main__':
     #Read data
     df = pd.read_csv('ad_data.csv')
 
     # Parsing date
     df['year'] = df.date.apply(get_year)
-    #df['month'] = df.date.apply(get_month)
-    #df['day'] = df.date.apply(get_day)
+    df['month'] = df.date.apply(get_month)
+    df['day'] = df.date.apply(get_day)
     df['day_of_week'] = df.date.apply(get_day_of_week)
     df['total_day_count'] = df.date.apply(get_total_day_count)
     df['working_day'] = df.day_of_week.apply(get_working_day)
     df = df.drop('date', 1)
 
     # Moving year,month,day columns to front
-    df = df[['year', 'day_of_week','working_day', 'total_day_count', 'impressions', 'clicks', 'conversions', 'cost',
+    df = df[['year','month','day', 'day_of_week','working_day', 'total_day_count', 'impressions', 'clicks', 'conversions', 'cost',
              'total_conversion_value', 'average_position', 'reservations', 'price']]
 
     # Renaming columns names
     df = df.rename(index=str,
                    columns={"average_position": "avg_position", "total_conversion_value": "tot_conversion_val"})
-    #Getting clicks & coversions columns as lists
-    clicks = df['clicks'].tolist()
-    conversions = df['conversions'].tolist()
-
-    #Moving each element up by removing first element. After that adding 0 to the end so that column size matched DF size
-    clicks.pop(0)
-    clicks.append(0)
-    conversions.pop(0)
-    conversions.append(0)
 
     #Creating 2 new columns with values of clicks&conversions of the next day
-    df['next_clicks'] = clicks
-    df['next_conversions'] = conversions
+    df['next_clicks'] = get_next_values(df['clicks'])
+    df['next_conversions'] = get_next_values(df['conversions'])
 
     #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
     df = df[:-1]
@@ -168,13 +81,11 @@ if __name__=='__main__':
     Y_train = np.array(Y[:train_data_size])
     X_val = np.array(X[train_data_size:])
     Y_val = np.array(Y[train_data_size:])
-    # X_test = np.array(X[train_data_size+val_data_size:])
-    # Y_test = np.array(Y[train_data_size+val_data_size:])
 
     train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    input_features = 12
+    input_features = 14
     fc1_dim = 30
     fc2_dim = 30
     fc3_dim = 60
