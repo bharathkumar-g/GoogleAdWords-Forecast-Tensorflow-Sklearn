@@ -73,8 +73,8 @@ if __name__ == '__main__':
     X = np.array(X)
     Y = np.array(Y)
 
-    num_eval = 20
-    num_n_neighbours = 30
+    num_eval = 1000
+    num_n_neighbours = 50
 
     scores = np.zeros(num_n_neighbours)
 
@@ -101,3 +101,6 @@ if __name__ == '__main__':
     scores = scores/num_eval
     print(scores)
     print("Best avg score for n = ",np.argmin(scores)+1,",avg score = ",np.min(scores))
+
+    plt.plot(scores)
+    plt.show()
