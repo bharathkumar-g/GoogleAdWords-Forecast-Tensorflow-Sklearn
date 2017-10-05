@@ -74,14 +74,16 @@ if __name__ == '__main__':
     Y = np.array(Y)
 
     num_eval = 1000
-    num_n_neighbours = 40
-
+    num_n_neighbours = 1
+    start_n_neighbours = 11
     val_scores = np.zeros(num_n_neighbours)
     train_scores = np.zeros(num_n_neighbours)
+    best_val_error = 1000
+    opt_train_error = 1000
 
-    for n_neighbours in range(1,num_n_neighbours+1):
+    for n_eval,n_neighbours in enumerate(range(start_n_neighbours,start_n_neighbours+num_n_neighbours)):
 
-        for i in range(num_eval):
+        for j in range(num_eval):
             # Random splitting data into train,val sets
             train_data_inds = random.sample(range(total_data_size), train_data_size)
             val_data_inds = list(set(range(total_data_size)) - set(train_data_inds))
@@ -94,17 +96,20 @@ if __name__ == '__main__':
             knn_classifier.fit(X_train, Y_train)
             predictions_train = knn_classifier.predict(X_train)
             train_error = get_euclides_error(predictions_train, Y_train)
-            train_scores[n_neighbours - 1] += train_error
+            train_scores[n_eval] += train_error
 
             predictions_val = knn_classifier.predict(X_val)
             val_error = get_euclides_error(predictions_val,Y_val)
-            val_scores[n_neighbours-1] += val_error
+            if val_error < best_val_error and val_error > train_error:
+                best_val_error = val_error
+                opt_train_error = train_error
+            val_scores[n_eval] += val_error
             #print("Train error:",train_error,", Val error:",val_error)
 
     val_scores = val_scores/num_eval
     train_scores = train_scores/num_eval
-
-    print("Best avg score for n = ",np.argmin(val_scores)+1,",avg score = ",np.min(val_scores))
+    print("Best score: Train:",opt_train_error,", Val:",best_val_error)
+    print("Best avg score for n = ",np.argmin(val_scores)+start_n_neighbours,",avg score = ",np.min(val_scores))
 
     plt.plot(train_scores,label='avg_train')
     plt.plot(val_scores,label='avg_test')
