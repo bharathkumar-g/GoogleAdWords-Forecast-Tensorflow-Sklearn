@@ -73,19 +73,32 @@ if __name__ == '__main__':
     X = np.array(X)
     Y = np.array(Y)
 
+    num_eval = 20
+    num_n_neighbours = 30
 
-    # Random splitting data into train,val sets
-    train_data_inds = random.sample(range(total_data_size), train_data_size)
-    val_data_inds = list(set(range(total_data_size)) - set(train_data_inds))
-    X_train = X[train_data_inds]
-    Y_train = Y[train_data_inds]
-    X_val = X[val_data_inds]
-    Y_val = Y[val_data_inds]
+    scores = np.zeros(num_n_neighbours)
 
-    knn_classifier = KNeighborsRegressor(n_neighbors=1, weights='distance')
-    knn_classifier.fit(X_train, Y_train)
-    predictions_train = knn_classifier.predict(X_train)
-    train_error = get_euclides_error(predictions_train, Y_train)
-    predictions_val = knn_classifier.predict(X_val)
-    val_error = get_euclides_error(predictions_val,Y_val)
-    print("Train error:",train_error,", Val error:",val_error)
+    for n_neighbours in range(1,num_n_neighbours+1):
+
+        for i in range(num_eval):
+            # Random splitting data into train,val sets
+            train_data_inds = random.sample(range(total_data_size), train_data_size)
+            val_data_inds = list(set(range(total_data_size)) - set(train_data_inds))
+            X_train = X[train_data_inds]
+            Y_train = Y[train_data_inds]
+            X_val = X[val_data_inds]
+            Y_val = Y[val_data_inds]
+
+            knn_classifier = KNeighborsRegressor(n_neighbors=n_neighbours, weights='distance')
+            knn_classifier.fit(X_train, Y_train)
+            predictions_train = knn_classifier.predict(X_train)
+            train_error = get_euclides_error(predictions_train, Y_train)
+            predictions_val = knn_classifier.predict(X_val)
+            val_error = get_euclides_error(predictions_val,Y_val)
+            scores[n_neighbours-1] += val_error
+            #print("Train error:",train_error,", Val error:",val_error)
+
+    scores = scores/num_eval
+    print(scores)
+    print("Best avg score for n = ",np.argmin(scores)+1,",avg score = ",np.min(scores))
+    
