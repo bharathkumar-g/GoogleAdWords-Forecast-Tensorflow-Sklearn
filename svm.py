@@ -1,11 +1,17 @@
 import pandas as pd
-import seaborn as sns
-import numpy as np
-from matplotlib import pyplot as plt
 from sklearn.svm import SVR
-import copy as cp
 import random
 from data_utils import *
+
+train_data_size = 600
+val_data_size = 130
+total_data_size = train_data_size + val_data_size
+stddev = 0.01
+epochs = 3000
+batch_size = 32
+steps_in_epoch = 530 // 10
+learning_rate = 0.001
+num_eval = 20
 
 def get_euclides_error(predictions, labels,round = False,print_arrays=False):
     if round:
@@ -44,10 +50,6 @@ if __name__=='__main__':
     df = df.rename(index=str,
                    columns={"average_position": "avg_position", "total_conversion_value": "tot_conversion_val"})
 
-    #Exponential smoothing of clicks
-    #clicks = df['clicks']
-    #df['clicks_smoothed'] = pd.ewma(clicks, span=2)
-
     #Creating 2 new columns with values of clicks&conversions of the next day
     df['next_clicks'] = get_next_values(df['clicks'])
     df['next_conversions'] = get_next_values(df['conversions'])
@@ -56,39 +58,30 @@ if __name__=='__main__':
     df = df[:-1]
 
     #Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
-    #df = get_previous_vals(df,n_features=5,diff=True)
+    #df = get_previous_vals(df,n_features=1,diff=True)
 
     #Shuffling the data, keep the index
     df = df.sample(frac=1)
 
     #Dividing the set into input features and output,
-    Y = df.ix[:,'next_clicks'].astype(float)
+    Y = df[['next_clicks']].astype(float)
     X = df.drop(['next_clicks','next_conversions'],1)
-
-    #print(X.head(10))
 
     #Normalizing inputs
     X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
-
-    train_data_size = 600
-    val_data_size = 130
-    total_data_size = train_data_size + val_data_size
-    stddev = 0.01
-    epochs = 3000
-    batch_size = 32
-    steps_in_epoch = 530//10
-    learning_rate = 0.001
-    num_eval = 100
 
     #Splitting into train,val,test sets
     X = np.array(X)
     Y = np.array(Y)
 
+    #Placeholders for average scores
     train_error_arr = np.zeros(3)
     val_error_arr = np.zeros(3)
     best_val_error = 1000
     best_error_info = {"kernel_name":"","train_error":0,"val_error:":0}
+
     for i in range(num_eval):
+        #Random splitting data into train,val sets
         train_data_inds = random.sample(range(total_data_size), train_data_size)
         val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
         X_train = X[train_data_inds]
@@ -96,7 +89,7 @@ if __name__=='__main__':
         X_val = X[val_data_inds]
         Y_val = Y[val_data_inds]
 
-        # Defining our SVR
+        # Creating SVR classifiers with linear,gaussian and polynomial kernels
         svr_lin = SVR(kernel='linear', C=1e3)
         svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.01)
         svr_poly = SVR(kernel='poly', C=1e3, degree=2,gamma=0.05)
@@ -125,9 +118,6 @@ if __name__=='__main__':
             if val_error_int < best_val_error and val_error_int >= train_error_int:
                 best_error_info ={"kernel_name":kernel_name,"train_error":train_error_int,"val_error":val_error_int}
                 best_val_error = val_error_int
-
-            #print(kernel_name,"kernel, Train Error:",train_error_int,"Val Error:",val_error_int)
-
 
     train_error_arr = train_error_arr/num_eval
     val_error_arr = val_error_arr / num_eval
