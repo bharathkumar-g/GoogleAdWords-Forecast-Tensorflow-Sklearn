@@ -76,8 +76,8 @@ if __name__ == '__main__':
     num_eval = 1000
     num_n_neighbours = 1
     start_n_neighbours = 11
-    val_scores = np.zeros(num_n_neighbours)
-    train_scores = np.zeros(num_n_neighbours)
+    val_errors = np.zeros(num_n_neighbours)
+    train_errors = np.zeros(num_n_neighbours)
     best_val_error = 1000
     opt_train_error = 1000
 
@@ -96,23 +96,23 @@ if __name__ == '__main__':
             knn_classifier.fit(X_train, Y_train)
             predictions_train = knn_classifier.predict(X_train)
             train_error = get_euclides_error(predictions_train, Y_train)
-            train_scores[n_eval] += train_error
+            train_errors[n_eval] += train_error
 
             predictions_val = knn_classifier.predict(X_val)
             val_error = get_euclides_error(predictions_val,Y_val)
             if val_error < best_val_error and val_error > train_error:
                 best_val_error = val_error
                 opt_train_error = train_error
-            val_scores[n_eval] += val_error
+            val_errors[n_eval] += val_error
             #print("Train error:",train_error,", Val error:",val_error)
 
-    val_scores = val_scores/num_eval
-    train_scores = train_scores/num_eval
-    print("Best score: Train:",opt_train_error,", Val:",best_val_error)
-    print("Best avg score for n = ",np.argmin(val_scores)+start_n_neighbours,",avg score = ",np.min(val_scores))
+    val_errors = val_errors/num_eval
+    train_errors = train_errors/num_eval
+    print("Best error: Train:",opt_train_error,", Val:",best_val_error)
+    print("Best avg val error for k = ",np.argmin(val_errors)+start_n_neighbours,",avg val error = ",np.min(val_errors))
 
-    plt.plot(train_scores,label='avg_train')
-    plt.plot(val_scores,label='avg_test')
+    plt.plot(train_errors,label='avg_train')
+    plt.plot(val_errors,label='avg_test')
     plt.xlabel('k parameter', fontsize=16)
     plt.ylabel('Error', fontsize=16)
     plt.legend()

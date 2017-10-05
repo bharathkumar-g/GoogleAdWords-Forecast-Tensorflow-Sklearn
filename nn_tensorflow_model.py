@@ -88,7 +88,7 @@ if __name__=='__main__':
     input_features = 14
     fc1_dim = 30
     fc2_dim = 30
-    fc3_dim = 60
+    fc3_dim = 30
     out_layer_dim = fc2_dim
     # Defining input/output placeholders
     X = tf.placeholder(dtype=tf.float32, shape=[None, input_features])
@@ -114,21 +114,22 @@ if __name__=='__main__':
     # Defining our model
     #fc = tf.reshape(X, [-1, W['fc'].get_shape().as_list()[0]])
     fc1 = tf.add(tf.matmul(X, W['fc1']), B['fc1'])
-    fc1 = tf.nn.relu(fc1)
+    fc1 = tf.nn.tanh(fc1)
     fc2 = tf.add(tf.matmul(fc1, W['fc2']), B['fc2'])
-    fc2 = tf.nn.relu(fc2)
-    #fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
-    #fc3 = tf.nn.relu(fc3)
+    fc2 = tf.nn.tanh(fc2)
+    fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
+    fc3 = tf.nn.relu(fc3)
 
     # Apply Dropout
-    fc_drop = tf.nn.dropout(fc2, keep_prob)
+    fc_drop = tf.nn.dropout(fc3, keep_prob)
 
     # Output
     output = tf.add(tf.matmul(fc_drop, W['out']), B['out'])
     output = tf.nn.relu(output)
     # Define loss and optimizer
-    loss_op = tf.reduce_mean(tf.squared_difference(output,Y))
+    #loss_op = tf.reduce_mean(tf.squared_difference(output,Y))
     loss_euclides = tf.reduce_mean(tf.abs(output-Y))
+    loss_op = loss_euclides
     #optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,)
     optimizer = tf.train.AdadeltaOptimizer(learning_rate=0.1)
     train_op = optimizer.minimize(loss_op)
