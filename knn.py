@@ -74,9 +74,10 @@ if __name__ == '__main__':
     Y = np.array(Y)
 
     num_eval = 1000
-    num_n_neighbours = 50
+    num_n_neighbours = 40
 
-    scores = np.zeros(num_n_neighbours)
+    val_scores = np.zeros(num_n_neighbours)
+    train_scores = np.zeros(num_n_neighbours)
 
     for n_neighbours in range(1,num_n_neighbours+1):
 
@@ -89,18 +90,25 @@ if __name__ == '__main__':
             X_val = X[val_data_inds]
             Y_val = Y[val_data_inds]
 
-            knn_classifier = KNeighborsRegressor(n_neighbors=n_neighbours, weights='distance')
+            knn_classifier = KNeighborsRegressor(n_neighbors=n_neighbours, weights='uniform')
             knn_classifier.fit(X_train, Y_train)
             predictions_train = knn_classifier.predict(X_train)
             train_error = get_euclides_error(predictions_train, Y_train)
+            train_scores[n_neighbours - 1] += train_error
+
             predictions_val = knn_classifier.predict(X_val)
             val_error = get_euclides_error(predictions_val,Y_val)
-            scores[n_neighbours-1] += val_error
+            val_scores[n_neighbours-1] += val_error
             #print("Train error:",train_error,", Val error:",val_error)
 
-    scores = scores/num_eval
-    print(scores)
-    print("Best avg score for n = ",np.argmin(scores)+1,",avg score = ",np.min(scores))
+    val_scores = val_scores/num_eval
+    train_scores = train_scores/num_eval
 
-    plt.plot(scores)
+    print("Best avg score for n = ",np.argmin(val_scores)+1,",avg score = ",np.min(val_scores))
+
+    plt.plot(train_scores,label='avg_train')
+    plt.plot(val_scores,label='avg_test')
+    plt.xlabel('k parameter', fontsize=16)
+    plt.ylabel('Error', fontsize=16)
+    plt.legend()
     plt.show()
