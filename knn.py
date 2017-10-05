@@ -1,5 +1,5 @@
 import pandas as pd
-from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
 import random
 from data_utils import *
 
@@ -26,6 +26,14 @@ def get_euclides_error(predictions, labels, round=False, print_arrays=False):
         print(results)
     return total_error / len(predictions)
 
+def euclidean_distance(row):
+    """
+    A simple euclidean distance function
+    """
+    inner_value = 0
+    for k in distance_columns:
+        inner_value += (row[k] - selected_player[k]) ** 2
+    return math.sqrt(inner_value)
 
 if __name__ == '__main__':
     # Read data
