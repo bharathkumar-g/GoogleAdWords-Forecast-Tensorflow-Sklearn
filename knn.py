@@ -1,4 +1,3 @@
-import pandas as pd
 from sklearn.neighbors import KNeighborsRegressor
 import random
 from data_utils import *
@@ -7,88 +6,22 @@ train_data_size = 600
 val_data_size = 70
 test_data_size = 60
 total_data_size = train_data_size + val_data_size +test_data_size
-stddev = 0.01
-epochs = 3000
-batch_size = 32
-steps_in_epoch = 530 // 10
-learning_rate = 0.001
-
-def get_euclides_error(predictions, labels, round=False, print_arrays=False):
-    if round:
-        predictions = np.rint(predictions)
-    total_error = 0
-    for y_pred, label in zip(predictions, labels):
-        total_error = total_error + np.abs(y_pred - label)
-    if print_arrays:
-        results = np.zeros((len(predictions), 2))
-        results[:, 0] = predictions
-        results[:, 1] = labels
-        print(results)
-    return total_error / len(predictions)
+num_eval = 5
+num_n_neighbours = 1
+start_n_neighbours = 5
+val_errors = np.zeros(num_n_neighbours)
+train_errors = np.zeros(num_n_neighbours)
+best_val_error = 1000
+opt_train_error = 1000
+test_error = 1000
 
 if __name__ == '__main__':
-    # Read data
-    df = pd.read_csv('ad_data.csv')
+    #Getting fully preprocessed dataframes as numpy arrays, specify output = 'conversions' for conversions
+    X,Y = get_processed_dataframe('ad_data.csv',output='conversions')
 
-    # Parsing date
-    df['year'] = df.date.apply(get_year)
-    df['month'] = df.date.apply(get_month)
-    df['day'] = df.date.apply(get_day)
-    df['day_of_week'] = df.date.apply(get_day_of_week)
-    df['total_day_count'] = df.date.apply(get_total_day_count)
-    df['working_day'] = df.day_of_week.apply(get_working_day)
-    df = df.drop('date', 1)
-
-    # Moving year,month,day columns to front
-    # df = df[['year', 'day_of_week','working_day', 'total_day_count', 'impressions', 'clicks', 'conversions', 'cost',
-    #          'total_conversion_value', 'average_position', 'reservations', 'price']]
-
-    df = df[['year', 'month', 'day', 'impressions', 'day_of_week', 'working_day', 'clicks', 'conversions', 'cost',
-             'total_conversion_value', 'average_position', 'reservations', 'price']]
-
-    # Renaming columns names
-    df = df.rename(index=str,
-                   columns={"average_position": "avg_position", "total_conversion_value": "tot_conversion_val"})
-
-    # Creating 2 new columns with values of clicks&conversions of the next day
-    df['next_clicks'] = get_next_values(df['clicks'])
-    df['next_conversions'] = get_next_values(df['conversions'])
-
-    # Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
-    df = df[:-1]
-
-    # Adding moving average
-    df['mov_avg_short'] = get_moving_avg(df['clicks'], n=6)
-    df['mov_avg_long'] = get_moving_avg(df['clicks'], n=30)
-
-    # Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
-    # df = get_previous_vals(df,n_features=1,diff=True)
-
-    # Shuffling the data, keep the index
-    df = df.sample(frac=1)
-
-    # Dividing the set into input features and output,
-    Y = df[['next_clicks']].astype(float)
-    X = df.drop(['next_clicks', 'next_conversions'], 1)
-
-    # Normalizing inputs
-    X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
-
-    # Splitting into train,val,test sets
-    X = np.array(X)
-    Y = np.array(Y)
-
-    num_eval = 100
-    num_n_neighbours = 1
-    start_n_neighbours = 11
-    val_errors = np.zeros(num_n_neighbours)
-    train_errors = np.zeros(num_n_neighbours)
-    best_val_error = 1000
-    opt_train_error = 1000
-    n_eval = 0
-    test_error = 1000
     for n,n_neighbours in enumerate(range(start_n_neighbours,start_n_neighbours+num_n_neighbours)):
-
+        n_eval = 0
+        #This loop is while because of distribution check
         while n_eval < num_eval:
             # Random splitting data into train,val sets
             train_data_inds = random.sample(range(total_data_size), train_data_size)
@@ -104,31 +37,37 @@ if __name__ == '__main__':
             if not check_distribution(mean_array=[np.mean(Y_train), np.mean(Y_val), np.mean(Y_test)],
                                       global_mean=np.mean(Y), margin=0.5):
                 continue
+            
+            #Training Knn regressor
+            knn_regressor = KNeighborsRegressor(n_neighbors=n_neighbours, weights='uniform')
+            knn_regressor.fit(X_train, Y_train)
 
-            knn_classifier = KNeighborsRegressor(n_neighbors=n_neighbours, weights='uniform')
-            knn_classifier.fit(X_train, Y_train)
-            predictions_train = knn_classifier.predict(X_train)
-            train_error = get_euclides_error(predictions_train, Y_train)
+            #Making predictions on train set
+            predictions_train = knn_regressor.predict(X_train)
+            train_error = get_euclidean_error(predictions_train, Y_train)
             train_errors[n] += train_error
 
-            predictions_val = knn_classifier.predict(X_val)
-            val_error = get_euclides_error(predictions_val,Y_val)
+            # Making predictions on val set
+            predictions_val = knn_regressor.predict(X_val)
+            val_error = get_euclidean_error(predictions_val,Y_val)
+
+            #If this is the best val error so far, save the error and get test error
             if val_error < best_val_error and val_error > train_error:
                 best_val_error = val_error
                 opt_train_error = train_error
-                predictions_test = knn_classifier.predict(X_test)
+                predictions_test = knn_regressor.predict(X_test)
                 predictions_test = get_positive_vals(predictions_test)
                 test_error = get_euclidean_error(predictions_test, Y_test, round=True)
+
             val_errors[n] += val_error
-            #print("Train error:",train_error,", Val error:",val_error)
             n_eval += 1
+
     print("Test error:", test_error)
 
     val_errors = val_errors/num_eval
     train_errors = train_errors/num_eval
     print("Best error: Train:",opt_train_error,", Val:",best_val_error)
-    print("")
-    #print("Best avg val error for k = ",np.argmin(val_errors)+start_n_neighbours,",avg val error = ",np.min(val_errors))
+    print("Best avg val error for k = ",np.argmin(val_errors)+start_n_neighbours,",avg val error = ",np.min(val_errors))
 
     plt.plot(train_errors,label='avg_train')
     plt.plot(val_errors,label='avg_test')
