@@ -1,4 +1,4 @@
-import pandas as pd
+#python version: 3.5
 import tensorflow as tf
 from data_utils import *
 
@@ -10,6 +10,11 @@ epochs = 3000
 batch_size = 100
 steps_in_epoch = train_data_size // batch_size
 learning_rate = 0.001
+input_features = 15
+fc1_dim = 30
+fc2_dim = 30
+fc3_dim = 30
+out_layer_dim = fc2_dim
 
 if __name__=='__main__':
 
@@ -17,30 +22,24 @@ if __name__=='__main__':
     X, Y = get_processed_dataframe('ad_data.csv', output='conversions')
 
     # Converting to numpy arrays
-    X = np.array(X)
-    Y = np.array(Y)
+    X_dataset = np.array(X)
+    Y_dataset = np.array(Y)
 
-    Y = Y.reshape(total_data_size)
+    Y_dataset = Y_dataset.reshape(total_data_size)
 
     #Splitting into train,val,test sets
-    X_train = np.array(X[:train_data_size])
-    Y_train = np.array(Y[:train_data_size])
-    X_val = np.array(X[train_data_size:])
-    Y_val = np.array(Y[train_data_size:])
+    X_train = np.array(X_dataset[:train_data_size])
+    Y_train = np.array(Y_dataset[:train_data_size])
+    X_val = np.array(X_dataset[train_data_size:])
+    Y_val = np.array(Y_dataset[train_data_size:])
 
     train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    input_features = 15
-    fc1_dim = 30
-    fc2_dim = 30
-    fc3_dim = 30
-    out_layer_dim = fc2_dim
     # Defining input/output placeholders
     X = tf.placeholder(dtype=tf.float32, shape=[None, input_features])
     Y = tf.placeholder(dtype=tf.float32, shape=[None])
     keep_prob = tf.placeholder(tf.float32)
-    #learning_rate = tf.placeholder(tf.float32)
 
     # Defining weights and biases
     W = {
@@ -76,8 +75,8 @@ if __name__=='__main__':
 
     #loss_op = tf.reduce_mean(tf.squared_difference(output,Y))
 
-    loss_euclides = tf.reduce_mean(tf.abs(output-Y))
-    loss_op = loss_euclides
+    loss_euclidean = tf.reduce_mean(tf.abs(output-Y))
+    loss_op = loss_euclidean
     #optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,)
     optimizer = tf.train.AdadeltaOptimizer(learning_rate=0.1)
     train_op = optimizer.minimize(loss_op)
@@ -95,6 +94,7 @@ if __name__=='__main__':
         val_acc_his = np.zeros(epochs)
         train_acc_his = np.zeros(epochs)
         for epoch in range(epochs):
+            #Eval train error
             train_loss = sess.run(loss_op, feed_dict={X: train_data.data, Y: train_data.labels, keep_prob: 1.0})
             train_acc_his[epoch] = train_loss
             if train_loss < best_train_loss and epoch != 0:
@@ -102,6 +102,7 @@ if __name__=='__main__':
                 acc_info = "train acc has improved!"
             else:
                 acc_info = ""
+            #Eval val error
             val_loss = sess.run(loss_op, feed_dict={X: val_data.data, Y: val_data.labels, keep_prob: 1.0})
             val_acc_his[epoch] = val_loss
             if val_loss < best_val_loss and epoch != 0:
@@ -120,7 +121,7 @@ if __name__=='__main__':
                 #print(pred,loss_)
         saver.restore(sess, "/tmp/model.ckpt")
         print("Model loaded.")
-        euclides_loss = sess.run(loss_euclides, feed_dict={X: X_dataset, Y: Y_dataset, keep_prob: 1.0})
+        euclides_loss = sess.run(loss_euclidean, feed_dict={X: X_dataset, Y: Y_dataset, keep_prob: 1.0})
         squared_loss = sess.run(loss_op, feed_dict={X: X_dataset, Y: Y_dataset, keep_prob: 1.0})
         print("Total loss: Euclides:",euclides_loss,", Squared", squared_loss)
         plt.plot(train_acc_his)

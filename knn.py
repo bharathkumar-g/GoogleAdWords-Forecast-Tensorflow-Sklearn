@@ -1,5 +1,5 @@
+#python version: 3.5
 from sklearn.neighbors import KNeighborsRegressor
-import random
 from data_utils import *
 
 train_data_size = 600

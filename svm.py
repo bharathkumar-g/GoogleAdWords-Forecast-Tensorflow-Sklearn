@@ -1,6 +1,5 @@
-import pandas as pd
+#python version: 3.5
 from sklearn.svm import SVR
-import random
 from data_utils import *
 
 train_data_size = 600
@@ -19,9 +18,10 @@ test_error = 1000
 num_eval = 1
 
 if __name__=='__main__':
-
+    #Getting fully processed dataframe
     df_X,df_Y = get_processed_dataframe('ad_data.csv',output='clicks',raw=False)
     df_raw = get_processed_dataframe('ad_data.csv',output='clicks',raw=True)
+
     # Converting to numpy arrays
     X = np.array(df_X)
     Y = np.array(df_Y)
