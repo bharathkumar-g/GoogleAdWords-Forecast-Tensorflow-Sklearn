@@ -145,7 +145,10 @@ def get_euclidean_error(predictions, labels,round = False,print_arrays=False):
         print(results)
     return total_error / len(predictions)
 
-def get_processed_dataframe(df_path,output='clicks'):
+def get_mean_rel_err(arr_true,arr_pred):
+    return np.mean(np.abs((arr_true-arr_pred)/arr_true))*100
+
+def get_processed_dataframe(df_path,output='clicks',raw = False):
     # Read data
     df = pd.read_csv(df_path)
 
@@ -180,6 +183,9 @@ def get_processed_dataframe(df_path,output='clicks'):
     # Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
     # df = get_previous_vals(df,n_features=1,diff=True)
 
+    if raw == True:
+        return df
+
     # Shuffling the data, keep the index
     df = df.sample(frac=1)
 
@@ -193,9 +199,5 @@ def get_processed_dataframe(df_path,output='clicks'):
 
     # Normalizing inputs
     X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
-
-    # Converting to numpy arrays
-    X = np.array(X)
-    Y = np.array(Y)
 
     return X,Y

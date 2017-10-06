@@ -20,9 +20,14 @@ num_eval = 1
 
 if __name__=='__main__':
 
-    X,Y = get_processed_dataframe('ad_data.csv',output='conversions')
+    df_X,df_Y = get_processed_dataframe('ad_data.csv',output='clicks',raw=False)
+    df_raw = get_processed_dataframe('ad_data.csv',output='clicks',raw=True)
+    # Converting to numpy arrays
+    X = np.array(df_X)
+    Y = np.array(df_Y)
 
     n_eval = 0
+    all_predictions = None
 
     while n_eval < num_eval:
         #Random splitting data into train,val sets
@@ -42,7 +47,7 @@ if __name__=='__main__':
         # Creating SVR classifiers with linear,gaussian and polynomial kernels
         svr_lin = SVR(kernel='linear', C=1000)
         svr_rbf = SVR(kernel='rbf', C=1000, gamma=0.03)
-        svr_poly = SVR(kernel='poly', C=1000, degree=2,gamma=0.1)
+        svr_poly = SVR(kernel='poly', C=1000, degree=2,gamma=0.05)
 
         classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
 
@@ -68,10 +73,26 @@ if __name__=='__main__':
                 predictions_test = classifier.predict(X_test)
                 predictions_test = get_positive_vals(predictions_test)
                 test_error = get_euclidean_error(predictions_test, Y_test, round=True)
+                all_predictions = classifier.predict(X)
         n_eval += 1
 
     train_error_arr = train_error_arr/num_eval
     val_error_arr = val_error_arr / num_eval
+
+    #Calculating moving averages
+    mov_avg_pred7 = get_moving_avg(all_predictions,7)
+    mov_avg_pred14 = get_moving_avg(all_predictions, 14)
+    mov_avg_pred21 = get_moving_avg(all_predictions, 21)
+    mov_avg7 = get_moving_avg(df_raw['clicks'], n=7)
+    mov_avg14 = get_moving_avg(df_raw['clicks'], n=14)
+    mov_avg21 = get_moving_avg(df_raw['clicks'], n=21)
+
+    #Calculating mean relative error
+    mean_rel_err7 = get_mean_rel_err(mov_avg_pred7,mov_avg7)
+    mean_rel_err14 = get_mean_rel_err(mov_avg_pred14, mov_avg14)
+    mean_rel_err21 = get_mean_rel_err(mov_avg_pred21, mov_avg21)
+
+    print("Moving averages: n = 7:",mean_rel_err7,"%, n=14:",mean_rel_err14,"%,n=21:",mean_rel_err21,"%")
 
     print("Test error:",test_error)
 

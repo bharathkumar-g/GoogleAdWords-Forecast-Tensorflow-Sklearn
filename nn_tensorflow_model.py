@@ -15,6 +15,11 @@ if __name__=='__main__':
 
     #Loading fully processed dataframe
     X, Y = get_processed_dataframe('ad_data.csv', output='conversions')
+
+    # Converting to numpy arrays
+    X = np.array(X)
+    Y = np.array(Y)
+
     Y = Y.reshape(total_data_size)
 
     #Splitting into train,val,test sets

@@ -19,6 +19,10 @@ if __name__ == '__main__':
     #Getting fully preprocessed dataframes as numpy arrays, specify output = 'conversions' for conversions
     X,Y = get_processed_dataframe('ad_data.csv',output='conversions')
 
+    # Converting to numpy arrays
+    X = np.array(X)
+    Y = np.array(Y)
+
     for n,n_neighbours in enumerate(range(start_n_neighbours,start_n_neighbours+num_n_neighbours)):
         n_eval = 0
         #This loop is while because of distribution check
