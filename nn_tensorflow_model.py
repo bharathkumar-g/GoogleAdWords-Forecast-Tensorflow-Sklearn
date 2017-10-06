@@ -2,81 +2,19 @@ import pandas as pd
 import tensorflow as tf
 from data_utils import *
 
-class DataWrapper:
-    def __init__(self,x,y,data_size,batch_size):
-        self.data = x
-        self.labels = y
-        self.data_size = data_size
-        self.batch_size = batch_size
-        self.next_batch_ind = 0
-
-    def get_next_batch(self):
-        batch_x = self.data[self.next_batch_ind:self.next_batch_ind+batch_size]
-        batch_y = self.labels[self.next_batch_ind:self.next_batch_ind+batch_size]
-        self.next_batch_ind += self.batch_size
-        if self.next_batch_ind + self.batch_size > self.data_size:
-            self.next_batch_ind = 0
-        #print(batch_x,batch_y)
-        return batch_x,batch_y
-
-START_YEAR = 2015
-DAYS_IN_YEAR = 365
-MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31]
+total_data_size = 730
+train_data_size = 600
+val_data_size = 130
+stddev = 0.01
+epochs = 3000
+batch_size = 32
+steps_in_epoch = train_data_size // batch_size
+learning_rate = 0.001
 
 if __name__=='__main__':
-    #Read data
-    df = pd.read_csv('ad_data.csv')
 
-    # Parsing date
-    df['year'] = df.date.apply(get_year)
-    df['month'] = df.date.apply(get_month)
-    df['day'] = df.date.apply(get_day)
-    df['day_of_week'] = df.date.apply(get_day_of_week)
-    df['total_day_count'] = df.date.apply(get_total_day_count)
-    df['working_day'] = df.day_of_week.apply(get_working_day)
-    df = df.drop('date', 1)
-
-    # Moving year,month,day columns to front
-    df = df[['year','month','day', 'day_of_week','working_day', 'total_day_count', 'impressions', 'clicks', 'conversions', 'cost',
-             'total_conversion_value', 'average_position', 'reservations', 'price']]
-
-    # Renaming columns names
-    df = df.rename(index=str,
-                   columns={"average_position": "avg_position", "total_conversion_value": "tot_conversion_val"})
-
-    #Creating 2 new columns with values of clicks&conversions of the next day
-    df['next_clicks'] = get_next_values(df['clicks'])
-    df['next_conversions'] = get_next_values(df['conversions'])
-
-    #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
-    df = df[:-1]
-
-    df['mov_avg_short'] = get_moving_avg(df['clicks'], n=6)
-    df['mov_avg_long'] = get_moving_avg(df['clicks'], n=30)
-
-    #Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
-    #df = get_previous_vals(df,n_features=3,diff=True)
-
-    #Shuffling the data, keep the index
-    df = df.sample(frac=1)
-
-    #Dividing the set into input features and output,
-    Y = df.ix[:,'next_clicks']
-    X = df.drop(['next_clicks','next_conversions'],1)
-
-    print(X.head(10))
-
-    #Normalizing inputs
-    X = (X - X.min() - (X.max() - X.min()) / 2) / ((X.max() - X.min()) / 2)
-
-    train_data_size = 600
-    val_data_size = 130
-    stddev = 0.01
-    epochs = 3000
-    batch_size = 32
-    steps_in_epoch = 530//10
-    learning_rate = 0.001
-
+    X, Y = get_processed_dataframe('ad_data.csv', output='conversions')
+    Y = Y.reshape(total_data_size)
     #Splitting into train,val,test sets
     X_dataset = X
     Y_dataset = Y
@@ -88,7 +26,7 @@ if __name__=='__main__':
     train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    input_features = 16
+    input_features = 15
     fc1_dim = 30
     fc2_dim = 30
     fc3_dim = 30
