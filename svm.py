@@ -17,8 +17,7 @@ val_error_arr = np.zeros(3)
 best_val_error = 1000
 test_error = 1000
 
-num_eval = 5
-
+num_eval = 1
 
 if __name__=='__main__':
 

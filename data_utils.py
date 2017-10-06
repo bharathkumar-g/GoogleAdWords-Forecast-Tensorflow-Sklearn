@@ -8,6 +8,23 @@ START_YEAR = 2015
 DAYS_IN_YEAR = 365
 MONTH_DAYS = [31,28,31,30,31,30,31,31,30,31,30,31]
 
+class DataWrapper:
+    def __init__(self,x,y,data_size,batch_size):
+        self.data = x
+        self.labels = y
+        self.data_size = data_size
+        self.batch_size = batch_size
+        self.next_batch_ind = 0
+
+    def get_next_batch(self):
+        batch_x = self.data[self.next_batch_ind:self.next_batch_ind+self.batch_size]
+        batch_y = self.labels[self.next_batch_ind:self.next_batch_ind+self.batch_size]
+        self.next_batch_ind += self.batch_size
+        if self.next_batch_ind + self.batch_size > self.data_size:
+            self.next_batch_ind = 0
+        #print(batch_x,batch_y)
+        return batch_x,batch_y
+
 def plot_corr_mat(df):
     corr = df.corr()
     # Generate a mask for the upper triangle
@@ -141,9 +158,6 @@ def get_processed_dataframe(df_path,output='clicks'):
     df = df.drop('date', 1)
 
     # Moving year,month,day columns to front
-    # df = df[['year', 'day_of_week','working_day', 'total_day_count', 'impressions', 'clicks', 'conversions', 'cost',
-    #          'total_conversion_value', 'average_position', 'reservations', 'price']]
-
     df = df[['year', 'month', 'day', 'impressions', 'day_of_week', 'working_day', 'clicks', 'conversions', 'cost',
              'total_conversion_value', 'average_position', 'reservations', 'price']]
 
