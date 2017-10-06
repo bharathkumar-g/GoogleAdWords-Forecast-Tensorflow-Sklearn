@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import copy as cp
 import pandas as pd
+import random
 
 START_YEAR = 2015
 DAYS_IN_YEAR = 365
@@ -17,12 +18,12 @@ class DataWrapper:
         self.next_batch_ind = 0
 
     def get_next_batch(self):
-        batch_x = self.data[self.next_batch_ind:self.next_batch_ind+self.batch_size]
-        batch_y = self.labels[self.next_batch_ind:self.next_batch_ind+self.batch_size]
+        batch_inds = random.sample(range(self.data_size), self.batch_size)
+        batch_x = self.data[batch_inds]
+        batch_y = self.labels[batch_inds]
         self.next_batch_ind += self.batch_size
         if self.next_batch_ind + self.batch_size > self.data_size:
             self.next_batch_ind = 0
-        #print(batch_x,batch_y)
         return batch_x,batch_y
 
 def plot_corr_mat(df):

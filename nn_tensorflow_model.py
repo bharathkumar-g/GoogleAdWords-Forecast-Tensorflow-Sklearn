@@ -7,17 +7,17 @@ train_data_size = 600
 val_data_size = 130
 stddev = 0.01
 epochs = 3000
-batch_size = 32
+batch_size = 100
 steps_in_epoch = train_data_size // batch_size
 learning_rate = 0.001
 
 if __name__=='__main__':
 
+    #Loading fully processed dataframe
     X, Y = get_processed_dataframe('ad_data.csv', output='conversions')
     Y = Y.reshape(total_data_size)
+
     #Splitting into train,val,test sets
-    X_dataset = X
-    Y_dataset = Y
     X_train = np.array(X[:train_data_size])
     Y_train = np.array(Y[:train_data_size])
     X_val = np.array(X[train_data_size:])
@@ -55,9 +55,9 @@ if __name__=='__main__':
     # Defining our model
     #fc = tf.reshape(X, [-1, W['fc'].get_shape().as_list()[0]])
     fc1 = tf.add(tf.matmul(X, W['fc1']), B['fc1'])
-    fc1 = tf.nn.tanh(fc1)
+    fc1 = tf.nn.relu(fc1)
     fc2 = tf.add(tf.matmul(fc1, W['fc2']), B['fc2'])
-    fc2 = tf.nn.tanh(fc2)
+    fc2 = tf.nn.relu(fc2)
     fc3 = tf.add(tf.matmul(fc2, W['fc3']), B['fc3'])
     fc3 = tf.nn.relu(fc3)
 

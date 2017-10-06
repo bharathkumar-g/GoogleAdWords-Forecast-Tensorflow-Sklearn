@@ -13,7 +13,6 @@ best_error_info = {"kernel_name": "", "train_error": 0, "val_error": 0}
 # Placeholders for average scores
 train_error_arr = np.zeros(3)
 val_error_arr = np.zeros(3)
-
 best_val_error = 1000
 test_error = 1000
 
