@@ -51,6 +51,9 @@ if __name__=='__main__':
     #Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
     df = df[:-1]
 
+    df['mov_avg_short'] = get_moving_avg(df['clicks'], n=6)
+    df['mov_avg_long'] = get_moving_avg(df['clicks'], n=30)
+
     #Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
     #df = get_previous_vals(df,n_features=3,diff=True)
 
@@ -85,7 +88,7 @@ if __name__=='__main__':
     train_data = DataWrapper(X_train,Y_train,train_data_size,batch_size)
     val_data = DataWrapper(X_val, Y_val, val_data_size, batch_size)
 
-    input_features = 14
+    input_features = 16
     fc1_dim = 30
     fc2_dim = 30
     fc3_dim = 30
@@ -127,7 +130,9 @@ if __name__=='__main__':
     output = tf.add(tf.matmul(fc_drop, W['out']), B['out'])
     output = tf.nn.relu(output)
     # Define loss and optimizer
+
     #loss_op = tf.reduce_mean(tf.squared_difference(output,Y))
+
     loss_euclides = tf.reduce_mean(tf.abs(output-Y))
     loss_op = loss_euclides
     #optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate,)

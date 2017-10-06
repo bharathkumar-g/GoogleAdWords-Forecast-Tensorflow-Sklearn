@@ -56,6 +56,10 @@ if __name__ == '__main__':
     # Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
     df = df[:-1]
 
+    # Adding moving average
+    df['mov_avg_short'] = get_moving_avg(df['clicks'], n=6)
+    df['mov_avg_long'] = get_moving_avg(df['clicks'], n=30)
+
     # Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
     # df = get_previous_vals(df,n_features=1,diff=True)
 
@@ -73,7 +77,7 @@ if __name__ == '__main__':
     X = np.array(X)
     Y = np.array(Y)
 
-    num_eval = 1000
+    num_eval = 1
     num_n_neighbours = 1
     start_n_neighbours = 11
     val_errors = np.zeros(num_n_neighbours)
