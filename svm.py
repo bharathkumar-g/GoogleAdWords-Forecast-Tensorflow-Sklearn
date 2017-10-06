@@ -3,27 +3,11 @@ from sklearn.svm import SVR
 import random
 from data_utils import *
 
-train_data_size = 530
-val_data_size = 100
-train_data_size = 100
-total_data_size = train_data_size + val_data_size + train_data_size
-stddev = 0.01
-epochs = 3000
-steps_in_epoch = 530 // 10
-learning_rate = 0.001
+train_data_size = 600
+val_data_size = 70
+test_data_size = 60
+total_data_size = train_data_size + val_data_size + test_data_size
 
-def get_euclidean_error(predictions, labels,round = False,print_arrays=False):
-    if round:
-        predictions = np.rint(predictions)
-    total_error = 0
-    for y_pred, label in zip(predictions, labels):
-        total_error = total_error + np.abs(y_pred-label)
-    if print_arrays:
-        results = np.zeros((len(predictions),2))
-        results[:,0] = predictions
-        results[:,1] = labels
-        print(results)
-    return total_error / len(predictions)
 if __name__=='__main__':
     #Read data
     df = pd.read_csv('ad_data.csv')
@@ -82,27 +66,31 @@ if __name__=='__main__':
     val_error_arr = np.zeros(3)
     best_val_error = 1000
     best_error_info = {"kernel_name":"","train_error":0,"val_error:":0}
-    num_eval = 1
+    num_eval = 10
     test_error = 0
-
-    for i in range(num_eval):
+    n_eval = 0
+    while n_eval < num_eval:
         #Random splitting data into train,val sets
         train_data_inds = random.sample(range(total_data_size), train_data_size)
-        train_val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
+        test_val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
         X_train = X[train_data_inds]
         Y_train = Y[train_data_inds]
-        X_val = X[train_val_data_inds[:val_data_size]]
-        Y_val = Y[train_val_data_inds[:val_data_size]]
-        X_test = X[train_val_data_inds[val_data_size:]]
-        Y_test = Y[train_val_data_inds[val_data_size:]]
+        X_val = X[test_val_data_inds[:val_data_size]]
+        Y_val = Y[test_val_data_inds[:val_data_size]]
+        X_test = X[test_val_data_inds[val_data_size:]]
+        Y_test = Y[test_val_data_inds[val_data_size:]]
+
+
+        if not check_distribution(mean_array=[np.mean(Y_train),np.mean(Y_val),np.mean(Y_test)],global_mean=np.mean(Y),margin=0.5):
+           continue
 
         # Creating SVR classifiers with linear,gaussian and polynomial kernels
-        # svr_lin = SVR(kernel='linear', C=1000)
-        #svr_rbf = SVR(kernel='rbf', C=1000, gamma=0.01)
-        svr_poly = SVR(kernel='poly', C=1000, degree=2,gamma=0.02)
+        svr_lin = SVR(kernel='linear', C=1000)
+        svr_rbf = SVR(kernel='rbf', C=1000, gamma=0.01)
+        svr_poly = SVR(kernel='poly', C=1000, degree=2,gamma=0.05)
 
-        #classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
-        classifiers = {"types": [svr_poly], "kernel_names": ["Polynomial"]}
+        classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
+        #classifiers = {"types": [svr_poly], "kernel_names": ["Polynomial"]}
 
         for classifier,kernel_name,id in zip(classifiers["types"],classifiers["kernel_names"],range(3)):
             #print("SVM with",kernel_name,"kernel:")
@@ -127,6 +115,7 @@ if __name__=='__main__':
                 predictions_test = classifier.predict(X_test)
                 predictions_test = get_positive_vals(predictions_test)
                 test_error = get_euclidean_error(predictions_test, Y_test, round=True)
+        n_eval += 1
 
     train_error_arr = train_error_arr/num_eval
     val_error_arr = val_error_arr / num_eval
