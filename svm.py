@@ -3,12 +3,12 @@ from sklearn.svm import SVR
 import random
 from data_utils import *
 
-train_data_size = 600
-val_data_size = 130
-total_data_size = train_data_size + val_data_size
+train_data_size = 530
+val_data_size = 100
+train_data_size = 100
+total_data_size = train_data_size + val_data_size + train_data_size
 stddev = 0.01
 epochs = 3000
-batch_size = 32
 steps_in_epoch = 530 // 10
 learning_rate = 0.001
 
@@ -59,6 +59,7 @@ if __name__=='__main__':
     # Adding moving average
     df['mov_avg_short'] = get_moving_avg(df['clicks'], n=6)
     df['mov_avg_long'] = get_moving_avg(df['clicks'], n=30)
+
     #Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
     #df = get_previous_vals(df,n_features=1,diff=True)
 
@@ -81,21 +82,24 @@ if __name__=='__main__':
     val_error_arr = np.zeros(3)
     best_val_error = 1000
     best_error_info = {"kernel_name":"","train_error":0,"val_error:":0}
-    num_eval = 1000
+    num_eval = 1
+    test_error = 0
 
     for i in range(num_eval):
         #Random splitting data into train,val sets
         train_data_inds = random.sample(range(total_data_size), train_data_size)
-        val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
+        train_val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
         X_train = X[train_data_inds]
         Y_train = Y[train_data_inds]
-        X_val = X[val_data_inds]
-        Y_val = Y[val_data_inds]
+        X_val = X[train_val_data_inds[:val_data_size]]
+        Y_val = Y[train_val_data_inds[:val_data_size]]
+        X_test = X[train_val_data_inds[val_data_size:]]
+        Y_test = Y[train_val_data_inds[val_data_size:]]
 
         # Creating SVR classifiers with linear,gaussian and polynomial kernels
         # svr_lin = SVR(kernel='linear', C=1000)
         #svr_rbf = SVR(kernel='rbf', C=1000, gamma=0.01)
-        svr_poly = SVR(kernel='poly', C=1000, degree=3,gamma=0.05)
+        svr_poly = SVR(kernel='poly', C=1000, degree=2,gamma=0.02)
 
         #classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
         classifiers = {"types": [svr_poly], "kernel_names": ["Polynomial"]}
@@ -106,15 +110,13 @@ if __name__=='__main__':
 
             # Calculating Train set error
             predictions_train = classifier.predict(X_train)
-            get_positive_vals = lambda x: x if x >= 0 else 0
-            predictions_train = [get_positive_vals(y) for y in predictions_train]
+            predictions_train = get_positive_vals(predictions_train)
             train_error_int = get_euclidean_error(predictions_train, Y_train,round=True)
             train_error_arr[id] += train_error_int
 
             # Calcualting Val set error
             predictions_val = classifier.predict(X_val)
-            get_positive_vals = lambda x: x if x >= 0 else 0
-            predictions_val = [get_positive_vals(y) for y in predictions_val]
+            predictions_val = get_positive_vals(predictions_val)
             val_error_int = get_euclidean_error(predictions_val, Y_val,round=True)
             val_error_arr[id] += val_error_int
 
@@ -122,10 +124,15 @@ if __name__=='__main__':
             if val_error_int < best_val_error and val_error_int >= train_error_int:
                 best_error_info ={"kernel_name":kernel_name,"train_error":train_error_int,"val_error":val_error_int}
                 best_val_error = val_error_int
+                predictions_test = classifier.predict(X_test)
+                predictions_test = get_positive_vals(predictions_test)
+                test_error = get_euclidean_error(predictions_test, Y_test, round=True)
 
     train_error_arr = train_error_arr/num_eval
     val_error_arr = val_error_arr / num_eval
-    
+
+    print("Test error:",test_error)
+
     print("Evaluation finished, showing average results from",num_eval,"evaluations.")
     for train_error,val_error,kernel_name in zip(train_error_arr,val_error_arr,classifiers['kernel_names']):
         print("SVM with",kernel_name,": Train error",train_error,", Val error:",val_error)
