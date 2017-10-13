@@ -17,7 +17,7 @@ test_error = 1000
 
 if __name__ == '__main__':
     #Getting fully preprocessed dataframes as numpy arrays, specify output = 'conversions' for conversions
-    X,Y = get_processed_dataframe('ad_data.csv',output='conversions')
+    X,Y = get_processed_dataframe('ad_data.csv',output='clicks')
 
     # Converting to numpy arrays
     X = np.array(X)

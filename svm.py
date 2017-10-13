@@ -26,6 +26,8 @@ if __name__=='__main__':
     X = np.array(df_X)
     Y = np.array(df_Y)
 
+    #print(Y[0,0],Y[0,1],Y[:3,:])
+
     n_eval = 0
     all_predictions = None
 
@@ -34,15 +36,15 @@ if __name__=='__main__':
         train_data_inds = random.sample(range(total_data_size), train_data_size)
         test_val_data_inds = list(set(range(total_data_size))- set(train_data_inds))
         X_train = X[train_data_inds]
-        Y_train = Y[train_data_inds]
+        Y_train = Y[train_data_inds,1]
         X_val = X[test_val_data_inds[:val_data_size]]
-        Y_val = Y[test_val_data_inds[:val_data_size]]
+        Y_val = Y[test_val_data_inds[:val_data_size],0]
         X_test = X[test_val_data_inds[val_data_size:]]
-        Y_test = Y[test_val_data_inds[val_data_size:]]
+        Y_test = Y[test_val_data_inds[val_data_size:],0]
 
         #Checking distribution of data
-        if not check_distribution(mean_array=[np.mean(Y_train),np.mean(Y_val),np.mean(Y_test)],global_mean=np.mean(Y),margin=0.5):
-           continue
+        #if not check_distribution(mean_array=[np.mean(Y_train),np.mean(Y_val),np.mean(Y_test)],global_mean=np.mean(Y),margin=0.5):
+        #   continue
 
         # Creating SVR classifiers with linear,gaussian and polynomial kernels
         svr_lin = SVR(kernel='linear', C=1000)
@@ -51,7 +53,7 @@ if __name__=='__main__':
 
         classifiers = {"types":[svr_lin,svr_rbf,svr_poly],"kernel_names": ["Linear","RBF","Polynomial"]}
 
-        for classifier,kernel_name,id in zip(classifiers["types"],classifiers["kernel_names"],range(3)):
+        for id,(classifier,kernel_name) in enumerate(zip(classifiers["types"],classifiers["kernel_names"])):
             #print("SVM with",kernel_name,"kernel:")
             classifier.fit(X_train, Y_train)
 
@@ -64,7 +66,7 @@ if __name__=='__main__':
             # Calcualting Val set error
             predictions_val = classifier.predict(X_val)
             predictions_val = get_positive_vals(predictions_val)
-            val_error_int = get_euclidean_error(predictions_val, Y_val,round=True)
+            val_error_int = get_euclidean_error(np.exp(predictions_val), Y_val,round=True)
             val_error_arr[id] += val_error_int
 
             if val_error_int < best_val_error and val_error_int >= train_error_int:
@@ -72,7 +74,7 @@ if __name__=='__main__':
                 best_val_error = val_error_int
                 predictions_test = classifier.predict(X_test)
                 predictions_test = get_positive_vals(predictions_test)
-                test_error = get_euclidean_error(predictions_test, Y_test, round=True)
+                test_error = get_euclidean_error(np.exp(predictions_test), Y_test, round=True)
                 all_predictions = classifier.predict(X)
         n_eval += 1
 
@@ -80,9 +82,9 @@ if __name__=='__main__':
     val_error_arr = val_error_arr / num_eval
 
     #Calculating moving averages
-    mov_avg_pred7 = get_moving_avg(all_predictions,7)
-    mov_avg_pred14 = get_moving_avg(all_predictions, 14)
-    mov_avg_pred21 = get_moving_avg(all_predictions, 21)
+    mov_avg_pred7 = get_moving_avg(np.exp(all_predictions),7)
+    mov_avg_pred14 = get_moving_avg(np.exp(all_predictions), 14)
+    mov_avg_pred21 = get_moving_avg(np.exp(all_predictions), 21)
     mov_avg7 = get_moving_avg(df_raw['clicks'], n=7)
     mov_avg14 = get_moving_avg(df_raw['clicks'], n=14)
     mov_avg21 = get_moving_avg(df_raw['clicks'], n=21)
@@ -92,9 +94,12 @@ if __name__=='__main__':
     mean_rel_err14 = get_mean_rel_err(mov_avg_pred14, mov_avg14)
     mean_rel_err21 = get_mean_rel_err(mov_avg_pred21, mov_avg21)
 
-    print("Moving averages: n = 7:",mean_rel_err7,"%, n=14:",mean_rel_err14,"%,n=21:",mean_rel_err21,"%")
+    #print("Moving averages: n = 7:",mean_rel_err7,"%, n=14:",mean_rel_err14,"%,n=21:",mean_rel_err21,"%")
 
     print("Test error:",test_error)
+
+    y_test_pred_real = np.exp(predictions_test)
+    print(np.column_stack((y_test_pred_real,Y_test)))
 
     print("Evaluation finished, showing average results from",num_eval,"evaluations.")
     for train_error,val_error,kernel_name in zip(train_error_arr,val_error_arr,classifiers['kernel_names']):
@@ -104,3 +109,7 @@ if __name__=='__main__':
         ", train error:",best_error_info["train_error"],
         ", val error:", best_error_info["val_error"]
     )
+
+    plt.plot(y_test_pred_real)
+    plt.plot(Y_test)
+    plt.show()

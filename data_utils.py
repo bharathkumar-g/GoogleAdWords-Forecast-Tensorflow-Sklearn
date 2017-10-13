@@ -174,12 +174,22 @@ def get_processed_dataframe(df_path,output='clicks',raw = False):
     df['next_clicks'] = get_next_values(df['clicks'])
     df['next_conversions'] = get_next_values(df['conversions'])
 
+    #Log transformation of clicks & conversions
+    if raw is False:
+        df['clicks_log'] = df.clicks.apply(lambda x: np.log(x+1))
+        df['conversions_log'] = df.conversions.apply(lambda x: np.log(x + 1))
+
+        df['next_clicks_log'] = get_next_values(df['clicks_log'])
+        df['next_conversions_log'] = get_next_values(df['conversions_log'])
+
+        df = df.drop(['clicks','conversions'], 1)
+
+        # Adding moving average
+        df['mov_avg_short'] = get_moving_avg(df['clicks_log'], n=6)
+        df['mov_avg_long'] = get_moving_avg(df['clicks_log'], n=30)
+
     # Dropping last row, because we won't learn anything from it. We have already extracted the clicks and conversions.
     df = df[:-1]
-
-    # Adding moving average
-    df['mov_avg_short'] = get_moving_avg(df['clicks'], n=6)
-    df['mov_avg_long'] = get_moving_avg(df['clicks'], n=30)
 
     # Specifying previous day data to use as features. Use diff to get derivatives(return difference between current and previous feature)
     # df = get_previous_vals(df,n_features=1,diff=True)
@@ -192,9 +202,9 @@ def get_processed_dataframe(df_path,output='clicks',raw = False):
 
     # Dividing the set into input features and output,
     if output == 'clicks':
-        Y = df[['next_clicks']].astype(float)
+        Y = df[['next_clicks','next_clicks_log']].astype(float)
     else:
-        Y = df[['next_conversions']].astype(float)
+        Y = df[['next_conversions','next_conversions_log']].astype(float)
 
     X = df.drop(['next_clicks', 'next_conversions'], 1)
 
