@@ -13,5 +13,7 @@ SVM score: 0.27(linear kernel)</br>
 KNN score: 0.35(k=5)</br>
 NN score: 0.27</br> 
 
-
-
+![alt text](https://github.com/PiotrSobczak/GoogleAdWords-Forecast-Tensorflow-Sklearn/blob/master/plots/next_clicks_clicks.png)
+![alt text](https://github.com/PiotrSobczak/GoogleAdWords-Forecast-Tensorflow-Sklearn/blob/master/plots/next_clicks_day_of_month.png)
+![alt text](https://github.com/PiotrSobczak/GoogleAdWords-Forecast-Tensorflow-Sklearn/blob/master/plots/next_clicks_impressions.png)
+![alt text](https://github.com/PiotrSobczak/GoogleAdWords-Forecast-Tensorflow-Sklearn/blob/master/plots/next_clicks_movavg.png)
